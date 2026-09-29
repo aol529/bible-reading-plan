@@ -745,6 +745,18 @@
   // for the fallback font, so re-measure once that settles.
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => syncPassageHeight());
 
+  // On mobile the passage panel stacks below the table, off-screen — after
+  // loading a passage there, scroll it into view so tapping a chapter link
+  // actually shows the reading rather than silently updating something the
+  // reader can't see. On desktop the panel's already visible, so this is a
+  // no-op there.
+  function scrollPassageIntoViewIfNeeded(){
+    const rect = passagePanel.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const fullyVisible = rect.top >= 0 && rect.bottom <= vh;
+    if (!fullyVisible) passagePanel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
   function showPanelState(state){
     passageEmpty.hidden = state !== 'empty';
     passageLoading.hidden = state !== 'loading';
@@ -825,6 +837,7 @@
 
       const hit = document.getElementById('search-hit');
       if (hit) hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      else scrollPassageIntoViewIfNeeded();
     } catch (e) {
       passageTitle.textContent = title;
       passageBody.innerHTML = '<div class="passage-error">Couldn\'t load this passage — try the BibleGateway link instead.</div>';
@@ -834,6 +847,7 @@
       passageGatewayLink.href = gwLink || '#';
       passageGatewayLink.hidden = !gwLink;
       showPanelState('content');
+      scrollPassageIntoViewIfNeeded();
     }
   }
 
@@ -1229,7 +1243,6 @@
     }
     verseSearchError.hidden = true;
     loadPassage(result.book, String(result.chapter), null, result.verse ? result : null);
-    document.getElementById('passage-panel').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
   // ---------------- Browse by book / chapter / verse ----------------
@@ -1327,7 +1340,6 @@
         btn.textContent = v.verse;
         btn.onclick = () => {
           loadPassage(book, String(chapter), null, { chapter, verse: v.verse, verseEnd: null });
-          document.getElementById('passage-panel').scrollIntoView({ block: 'start', behavior: 'smooth' });
         };
         browseGrid.appendChild(btn);
       });
