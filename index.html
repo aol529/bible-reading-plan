@@ -267,9 +267,18 @@
   }
 
   .passage-content{ animation:fadeIn .35s ease both; }
+  .passage-title-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   .passage-content h2{
     margin:0 0 4px; font-size:22px; font-weight:700; color:var(--ink);
   }
+  .listen-btn{
+    flex:none; font-family:'Lora',serif; font-size:12px; font-weight:600; padding:6px 13px;
+    border-radius:20px; border:1px solid var(--line); background:var(--surface);
+    color:var(--gold-deep); cursor:pointer; white-space:nowrap;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .listen-btn:hover{ background:var(--surface-2); border-color:var(--gold-light); }
+  .listen-btn.playing{ background:linear-gradient(135deg, var(--gold), var(--gold-deep)); color:#fff; border-color:var(--gold-deep); }
   .passage-source{ font-size:11px; color:var(--muted-2); text-transform:uppercase; letter-spacing:.06em; margin-bottom:18px; }
   .passage-content .chapter-head{
     font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--gold-deep);
@@ -429,7 +438,10 @@
     <div class="passage-empty" id="passage-empty">Click a chapter reference to read it here.</div>
     <div class="passage-loading" id="passage-loading" hidden><span class="spinner"></span> Loading passage…</div>
     <div class="passage-content" id="passage-content" hidden>
-      <h2 id="passage-title"></h2>
+      <div class="passage-title-row">
+        <h2 id="passage-title"></h2>
+        <button type="button" class="listen-btn" id="passage-listen-btn" hidden>&#128266; Listen</button>
+      </div>
       <div class="passage-source" id="passage-source"></div>
       <div id="passage-body"></div>
       <a id="passage-gateway-link" class="passage-gw-link" target="_blank" rel="noopener noreferrer">View on BibleGateway (NIV) &#8599;</a>
@@ -724,7 +736,50 @@
   const passageGatewayLink = document.getElementById('passage-gateway-link');
   const passageSource = document.getElementById('passage-source');
   const passagePanel = document.getElementById('passage-panel');
+  const passageListenBtn = document.getElementById('passage-listen-btn');
   let activeLink = null;
+
+  // Read-aloud — the browser's own built-in speech synthesis (Web Speech
+  // API), supported natively in every modern browser with no extra
+  // software or screen reader needed on the visitor's end. speechText is
+  // rebuilt for whichever passage is currently loaded (verse text only,
+  // no verse-number digits, so it reads naturally instead of "1 In the
+  // beginning 2 the earth was...").
+  const speechSupported = 'speechSynthesis' in window;
+  let speechText = '';
+  let speechState = 'idle'; // idle | playing | paused
+
+  function updateListenBtn(){
+    if (!speechSupported) return;
+    passageListenBtn.classList.toggle('playing', speechState !== 'idle');
+    passageListenBtn.innerHTML = speechState === 'idle' ? '&#128266; Listen'
+      : speechState === 'playing' ? '&#10073;&#10073; Pause'
+      : '&#9654; Resume';
+  }
+  function stopSpeech(){
+    if (speechSupported) window.speechSynthesis.cancel();
+    speechState = 'idle';
+    updateListenBtn();
+  }
+  if (speechSupported){
+    passageListenBtn.addEventListener('click', () => {
+      if (speechState === 'idle'){
+        if (!speechText) return;
+        const utter = new SpeechSynthesisUtterance(speechText);
+        utter.onend = () => { speechState = 'idle'; updateListenBtn(); };
+        utter.onerror = () => { speechState = 'idle'; updateListenBtn(); };
+        window.speechSynthesis.speak(utter);
+        speechState = 'playing';
+      } else if (speechState === 'playing'){
+        window.speechSynthesis.pause();
+        speechState = 'paused';
+      } else {
+        window.speechSynthesis.resume();
+        speechState = 'playing';
+      }
+      updateListenBtn();
+    });
+  }
 
   // Locks the passage panel to the exact height of whichever day/week/month
   // table is currently visible, so the last row of that table always sits
@@ -781,6 +836,8 @@
     if (linkEl) linkEl.classList.add('active');
     activeLink = linkEl || null;
 
+    stopSpeech();
+    speechText = '';
     showPanelState('loading');
     const targets = chapterTargets(book, chapters);
     const title = formatReading(book, chapters);
@@ -793,16 +850,19 @@
 
       passageBody.innerHTML = '';
       let liveWordCount = 0;
+      const speechParts = [];
       chapterResults.forEach((data, i) => {
         if (!data || !data.verses){ return; }
         const head = document.createElement('div');
         head.className = 'chapter-head';
         head.textContent = targets[i].book + ' ' + targets[i].chapter;
         passageBody.appendChild(head);
+        speechParts.push(targets[i].book + ' chapter ' + targets[i].chapter + '.');
 
         const p = document.createElement('p');
         data.verses.forEach(v => {
           liveWordCount += v.text.trim() ? v.text.trim().split(/\s+/).length : 0;
+          if (v.text.trim()) speechParts.push(v.text.trim());
           const span = document.createElement('span');
           span.className = 'verse';
           if (highlight && targets[i].chapter === highlight.chapter &&
@@ -823,6 +883,9 @@
         passageBody.innerHTML = '<div class="passage-error">Couldn\'t load this passage.</div>';
       }
 
+      speechText = speechParts.join(' ');
+      passageListenBtn.hidden = !speechSupported || !speechText;
+
       passageTitle.textContent = title;
       const liveMinutes = liveWordCount ? Math.max(1, Math.round(liveWordCount / READING_WPM)) : null;
       passageSource.textContent = currentTranslation.name + (liveMinutes ? ' · ~' + liveMinutes + ' min read' : '');
@@ -839,6 +902,7 @@
       if (hit) hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
       else scrollPassageIntoViewIfNeeded();
     } catch (e) {
+      passageListenBtn.hidden = true;
       passageTitle.textContent = title;
       passageBody.innerHTML = '<div class="passage-error">Couldn\'t load this passage — try the BibleGateway link instead.</div>';
       const fallbackMinutes = estimateMinutes(book, chapters);
