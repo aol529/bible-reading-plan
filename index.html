@@ -300,21 +300,21 @@
   .passage-error{ color:#a33; font-size:14px; }
 
   .version-panel{
-    flex:0 0 150px; align-self:flex-start; background:var(--surface); border:1px solid var(--line);
-    border-radius:var(--radius); box-shadow:var(--shadow-md);
-    padding:20px 16px; position:sticky; top:22px;
+    max-width:900px; margin:34px 20px 0; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow-md); padding:20px 24px;
   }
   .version-panel-title{
     font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
     margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--line-soft);
   }
+  #version-list{ display:flex; flex-wrap:wrap; gap:8px; }
   .version-btn{
-    display:block; width:100%; text-align:left; font-family:'Lora',serif;
-    font-size:13.5px; font-weight:500; padding:9px 12px; margin-bottom:6px;
-    border-radius:8px; border:1px solid transparent; background:none; color:var(--ink);
+    display:block; flex:1 1 150px; text-align:left; font-family:'Lora',serif;
+    font-size:13.5px; font-weight:500; padding:9px 12px;
+    border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink);
     cursor:pointer; transition:background .15s ease, color .15s ease, border-color .15s ease;
   }
-  .version-btn:hover{ background:var(--surface-2); border-color:var(--line); }
+  .version-btn:hover{ background:var(--surface); border-color:var(--gold-light); }
   .version-btn.active{
     background:linear-gradient(135deg, var(--gold), var(--gold-deep));
     color:#fff; box-shadow:var(--shadow-sm);
@@ -336,9 +336,6 @@
 
   @media (max-width:760px){
     .passage-panel{ position:static; max-height:none; max-width:none; }
-    .version-panel{ position:static; flex:1 1 100%; }
-    .version-panel #version-list{ display:flex; flex-wrap:wrap; gap:6px; }
-    .version-btn{ width:auto; margin-bottom:0; }
     .table-col{ padding:18px 16px 6px; width:100%; }
     table{ width:100%; }
     main{ gap:20px; }
@@ -448,11 +445,12 @@
     </div>
   </aside>
 
-  <aside class="version-panel">
-    <div class="version-panel-title">Translations</div>
-    <div id="version-list"></div>
-  </aside>
 </main>
+
+<div class="version-panel">
+  <div class="version-panel-title">Translations</div>
+  <div id="version-list"></div>
+</div>
 
 <div class="notes">
   <strong>Credit.</strong> This site's daily reading plan was inspired by
