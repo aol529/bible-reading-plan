@@ -1,0 +1,66 @@
+/* 52-Week Bible Reading Plan — seven parallel tracks read across each
+   week: Sunday=Epistles, Monday=Law, Tuesday=History, Wednesday=Psalms,
+   Thursday=Poetry, Friday=Prophecy, Saturday=Gospels.
+   Source: bible_plan.txt (Michael Coley, bible-reading.com, 1995-2009,
+   used with permission), transcribed programmatically from plaintext —
+   no OCR/scan ambiguity involved. */
+
+const PLAN_52WEEK = [
+  {w:1, Epistles:{b:"Romans",c:"1-2"}, Law:{b:"Genesis",c:"1-3"}, History:{b:"Joshua",c:"1-5"}, Psalms:{b:"Psalms",c:"1-2"}, Poetry:{b:"Job",c:"1-2"}, Prophecy:{b:"Isaiah",c:"1-6"}, Gospels:{b:"Matthew",c:"1-2"}},
+  {w:2, Epistles:{b:"Romans",c:"3-4"}, Law:{b:"Genesis",c:"4-7"}, History:{b:"Joshua",c:"6-10"}, Psalms:{b:"Psalms",c:"3-5"}, Poetry:{b:"Job",c:"3-4"}, Prophecy:{b:"Isaiah",c:"7-11"}, Gospels:{b:"Matthew",c:"3-4"}},
+  {w:3, Epistles:{b:"Romans",c:"5-6"}, Law:{b:"Genesis",c:"8-11"}, History:{b:"Joshua",c:"11-15"}, Psalms:{b:"Psalms",c:"6-8"}, Poetry:{b:"Job",c:"5-6"}, Prophecy:{b:"Isaiah",c:"12-17"}, Gospels:{b:"Matthew",c:"5-7"}},
+  {w:4, Epistles:{b:"Romans",c:"7-8"}, Law:{b:"Genesis",c:"12-15"}, History:{b:"Joshua",c:"16-20"}, Psalms:{b:"Psalms",c:"9-11"}, Poetry:{b:"Job",c:"7-8"}, Prophecy:{b:"Isaiah",c:"18-22"}, Gospels:{b:"Matthew",c:"8-10"}},
+  {w:5, Epistles:{b:"Romans",c:"9-10"}, Law:{b:"Genesis",c:"16-19"}, History:{b:"Joshua",c:"21-24"}, Psalms:{b:"Psalms",c:"12-14"}, Poetry:{b:"Job",c:"9-10"}, Prophecy:{b:"Isaiah",c:"23-28"}, Gospels:{b:"Matthew",c:"11-13"}},
+  {w:6, Epistles:{b:"Romans",c:"11-12"}, Law:{b:"Genesis",c:"20-23"}, History:{b:"Judges",c:"1-6"}, Psalms:{b:"Psalms",c:"15-17"}, Poetry:{b:"Job",c:"11-12"}, Prophecy:{b:"Isaiah",c:"29-33"}, Gospels:{b:"Matthew",c:"14-16"}},
+  {w:7, Epistles:{b:"Romans",c:"13-14"}, Law:{b:"Genesis",c:"24-27"}, History:{b:"Judges",c:"7-11"}, Psalms:{b:"Psalms",c:"18-20"}, Poetry:{b:"Job",c:"13-14"}, Prophecy:{b:"Isaiah",c:"34-39"}, Gospels:{b:"Matthew",c:"17-19"}},
+  {w:8, Epistles:{b:"Romans",c:"15-16"}, Law:{b:"Genesis",c:"28-31"}, History:{b:"Judges",c:"12-16"}, Psalms:{b:"Psalms",c:"21-23"}, Poetry:{b:"Job",c:"15-16"}, Prophecy:{b:"Isaiah",c:"40-44"}, Gospels:{b:"Matthew",c:"20-22"}},
+  {w:9, Epistles:{b:"1 Corinthians",c:"1-2"}, Law:{b:"Genesis",c:"32-35"}, History:{b:"Judges",c:"17-21"}, Psalms:{b:"Psalms",c:"24-26"}, Poetry:{b:"Job",c:"17-18"}, Prophecy:{b:"Isaiah",c:"45-50"}, Gospels:{b:"Matthew",c:"23-25"}},
+  {w:10, Epistles:{b:"1 Corinthians",c:"3-4"}, Law:{b:"Genesis",c:"36-39"}, History:{b:"Ruth"}, Psalms:{b:"Psalms",c:"27-29"}, Poetry:{b:"Job",c:"19-20"}, Prophecy:{b:"Isaiah",c:"51-55"}, Gospels:{b:"Matthew",c:"26-28"}},
+  {w:11, Epistles:{b:"1 Corinthians",c:"5-6"}, Law:{b:"Genesis",c:"40-43"}, History:{b:"1 Samuel",c:"1-5"}, Psalms:{b:"Psalms",c:"30-32"}, Poetry:{b:"Job",c:"21-22"}, Prophecy:{b:"Isaiah",c:"56-61"}, Gospels:{b:"Mark",c:"1-2"}},
+  {w:12, Epistles:{b:"1 Corinthians",c:"7-8"}, Law:{b:"Genesis",c:"44-47"}, History:{b:"1 Samuel",c:"6-10"}, Psalms:{b:"Psalms",c:"33-35"}, Poetry:{b:"Job",c:"23-24"}, Prophecy:{b:"Isaiah",c:"62-66"}, Gospels:{b:"Mark",c:"3-4"}},
+  {w:13, Epistles:{b:"1 Corinthians",c:"9-10"}, Law:{b:"Genesis",c:"48-50"}, History:{b:"1 Samuel",c:"11-15"}, Psalms:{b:"Psalms",c:"36-38"}, Poetry:{b:"Job",c:"25-26"}, Prophecy:{b:"Jeremiah",c:"1-6"}, Gospels:{b:"Mark",c:"5-6"}},
+  {w:14, Epistles:{b:"1 Corinthians",c:"11-12"}, Law:{b:"Exodus",c:"1-4"}, History:{b:"1 Samuel",c:"16-20"}, Psalms:{b:"Psalms",c:"39-41"}, Poetry:{b:"Job",c:"27-28"}, Prophecy:{b:"Jeremiah",c:"7-11"}, Gospels:{b:"Mark",c:"7-8"}},
+  {w:15, Epistles:{b:"1 Corinthians",c:"13-14"}, Law:{b:"Exodus",c:"5-8"}, History:{b:"1 Samuel",c:"21-25"}, Psalms:{b:"Psalms",c:"42-44"}, Poetry:{b:"Job",c:"29-30"}, Prophecy:{b:"Jeremiah",c:"12-16"}, Gospels:{b:"Mark",c:"9-10"}},
+  {w:16, Epistles:{b:"1 Corinthians",c:"15-16"}, Law:{b:"Exodus",c:"9-12"}, History:{b:"1 Samuel",c:"26-31"}, Psalms:{b:"Psalms",c:"45-47"}, Poetry:{b:"Job",c:"31-32"}, Prophecy:{b:"Jeremiah",c:"17-21"}, Gospels:{b:"Mark",c:"11-12"}},
+  {w:17, Epistles:{b:"2 Corinthians",c:"1-3"}, Law:{b:"Exodus",c:"13-16"}, History:{b:"2 Samuel",c:"1-4"}, Psalms:{b:"Psalms",c:"48-50"}, Poetry:{b:"Job",c:"33-34"}, Prophecy:{b:"Jeremiah",c:"22-26"}, Gospels:{b:"Mark",c:"13-14"}},
+  {w:18, Epistles:{b:"2 Corinthians",c:"4-5"}, Law:{b:"Exodus",c:"17-20"}, History:{b:"2 Samuel",c:"5-9"}, Psalms:{b:"Psalms",c:"51-53"}, Poetry:{b:"Job",c:"35-36"}, Prophecy:{b:"Jeremiah",c:"27-31"}, Gospels:{b:"Mark",c:"15-16"}},
+  {w:19, Epistles:{b:"2 Corinthians",c:"6-8"}, Law:{b:"Exodus",c:"21-24"}, History:{b:"2 Samuel",c:"10-14"}, Psalms:{b:"Psalms",c:"54-56"}, Poetry:{b:"Job",c:"37-38"}, Prophecy:{b:"Jeremiah",c:"32-36"}, Gospels:{b:"Luke",c:"1-2"}},
+  {w:20, Epistles:{b:"2 Corinthians",c:"9-10"}, Law:{b:"Exodus",c:"25-28"}, History:{b:"2 Samuel",c:"15-19"}, Psalms:{b:"Psalms",c:"57-59"}, Poetry:{b:"Job",c:"39-40"}, Prophecy:{b:"Jeremiah",c:"37-41"}, Gospels:{b:"Luke",c:"3-4"}},
+  {w:21, Epistles:{b:"2 Corinthians",c:"11-13"}, Law:{b:"Exodus",c:"29-32"}, History:{b:"2 Samuel",c:"20-24"}, Psalms:{b:"Psalms",c:"60-62"}, Poetry:{b:"Job",c:"41-42"}, Prophecy:{b:"Jeremiah",c:"42-46"}, Gospels:{b:"Luke",c:"5-6"}},
+  {w:22, Epistles:{b:"Galatians",c:"1-3"}, Law:{b:"Exodus",c:"33-36"}, History:{b:"1 Kings",c:"1-4"}, Psalms:{b:"Psalms",c:"63-65"}, Poetry:{b:"Proverbs",c:"1"}, Prophecy:{b:"Jeremiah",c:"47-52"}, Gospels:{b:"Luke",c:"7-8"}},
+  {w:23, Epistles:{b:"Galatians",c:"4-6"}, Law:{b:"Exodus",c:"37-40"}, History:{b:"1 Kings",c:"5-9"}, Psalms:{b:"Psalms",c:"66-68"}, Poetry:{b:"Proverbs",c:"2-3"}, Prophecy:{b:"Lamentations"}, Gospels:{b:"Luke",c:"9-10"}},
+  {w:24, Epistles:{b:"Ephesians",c:"1-3"}, Law:{b:"Leviticus",c:"1-3"}, History:{b:"1 Kings",c:"10-13"}, Psalms:{b:"Psalms",c:"69-71"}, Poetry:{b:"Proverbs",c:"4"}, Prophecy:{b:"Ezekiel",c:"1-6"}, Gospels:{b:"Luke",c:"11-12"}},
+  {w:25, Epistles:{b:"Ephesians",c:"4-6"}, Law:{b:"Leviticus",c:"4-6"}, History:{b:"1 Kings",c:"14-18"}, Psalms:{b:"Psalms",c:"72-74"}, Poetry:{b:"Proverbs",c:"5-6"}, Prophecy:{b:"Ezekiel",c:"7-12"}, Gospels:{b:"Luke",c:"13-14"}},
+  {w:26, Epistles:{b:"Philippians",c:"1-2"}, Law:{b:"Leviticus",c:"7-9"}, History:{b:"1 Kings",c:"19-22"}, Psalms:{b:"Psalms",c:"75-77"}, Poetry:{b:"Proverbs",c:"7"}, Prophecy:{b:"Ezekiel",c:"13-18"}, Gospels:{b:"Luke",c:"15-16"}},
+  {w:27, Epistles:{b:"Philippians",c:"3-4"}, Law:{b:"Leviticus",c:"10-12"}, History:{b:"2 Kings",c:"1-5"}, Psalms:{b:"Psalms",c:"78-80"}, Poetry:{b:"Proverbs",c:"8-9"}, Prophecy:{b:"Ezekiel",c:"19-24"}, Gospels:{b:"Luke",c:"17-18"}},
+  {w:28, Epistles:{b:"Colossians",c:"1-2"}, Law:{b:"Leviticus",c:"13-15"}, History:{b:"2 Kings",c:"6-10"}, Psalms:{b:"Psalms",c:"81-83"}, Poetry:{b:"Proverbs",c:"10"}, Prophecy:{b:"Ezekiel",c:"25-30"}, Gospels:{b:"Luke",c:"19-20"}},
+  {w:29, Epistles:{b:"Colossians",c:"3-4"}, Law:{b:"Leviticus",c:"16-18"}, History:{b:"2 Kings",c:"11-15"}, Psalms:{b:"Psalms",c:"84-86"}, Poetry:{b:"Proverbs",c:"11-12"}, Prophecy:{b:"Ezekiel",c:"31-36"}, Gospels:{b:"Luke",c:"21-22"}},
+  {w:30, Epistles:{b:"1 Thessalonians",c:"1-3"}, Law:{b:"Leviticus",c:"19-21"}, History:{b:"2 Kings",c:"16-20"}, Psalms:{b:"Psalms",c:"87-89"}, Poetry:{b:"Proverbs",c:"13"}, Prophecy:{b:"Ezekiel",c:"37-42"}, Gospels:{b:"Luke",c:"23-24"}},
+  {w:31, Epistles:{b:"1 Thessalonians",c:"4-5"}, Law:{b:"Leviticus",c:"22-24"}, History:{b:"2 Kings",c:"21-25"}, Psalms:{b:"Psalms",c:"90-92"}, Poetry:{b:"Proverbs",c:"14-15"}, Prophecy:{b:"Ezekiel",c:"43-48"}, Gospels:{b:"John",c:"1-2"}},
+  {w:32, Epistles:{b:"2 Thessalonians"}, Law:{b:"Leviticus",c:"25-27"}, History:{b:"1 Chronicles",c:"1-4"}, Psalms:{b:"Psalms",c:"93-95"}, Poetry:{b:"Proverbs",c:"16"}, Prophecy:{b:"Daniel",c:"1-6"}, Gospels:{b:"John",c:"3-4"}},
+  {w:33, Epistles:{b:"1 Timothy",c:"1-3"}, Law:{b:"Numbers",c:"1-4"}, History:{b:"1 Chronicles",c:"5-9"}, Psalms:{b:"Psalms",c:"96-98"}, Poetry:{b:"Proverbs",c:"17-18"}, Prophecy:{b:"Daniel",c:"7-12"}, Gospels:{b:"John",c:"5-6"}},
+  {w:34, Epistles:{b:"1 Timothy",c:"4-6"}, Law:{b:"Numbers",c:"5-8"}, History:{b:"1 Chronicles",c:"10-14"}, Psalms:{b:"Psalms",c:"99-101"}, Poetry:{b:"Proverbs",c:"19"}, Prophecy:{b:"Hosea",c:"1-7"}, Gospels:{b:"John",c:"7-9"}},
+  {w:35, Epistles:{b:"2 Timothy",c:"1-2"}, Law:{b:"Numbers",c:"9-12"}, History:{b:"1 Chronicles",c:"15-19"}, Psalms:{b:"Psalms",c:"102-104"}, Poetry:{b:"Proverbs",c:"20-21"}, Prophecy:{b:"Hosea",c:"8-14"}, Gospels:{b:"John",c:"10-12"}},
+  {w:36, Epistles:{b:"2 Timothy",c:"3-4"}, Law:{b:"Numbers",c:"13-16"}, History:{b:"1 Chronicles",c:"20-24"}, Psalms:{b:"Psalms",c:"105-107"}, Poetry:{b:"Proverbs",c:"22"}, Prophecy:{b:"Joel"}, Gospels:{b:"John",c:"13-15"}},
+  {w:37, Epistles:{b:"Titus"}, Law:{b:"Numbers",c:"17-20"}, History:{b:"1 Chronicles",c:"25-29"}, Psalms:{b:"Psalms",c:"108-110"}, Poetry:{b:"Proverbs",c:"23-24"}, Prophecy:{b:"Amos",c:"1-4"}, Gospels:{b:"John",c:"16-18"}},
+  {w:38, Epistles:{b:"Philemon"}, Law:{b:"Numbers",c:"21-24"}, History:{b:"2 Chronicles",c:"1-5"}, Psalms:{b:"Psalms",c:"111-113"}, Poetry:{b:"Proverbs",c:"25"}, Prophecy:{b:"Amos",c:"5-9"}, Gospels:{b:"John",c:"19-21"}},
+  {w:39, Epistles:{b:"Hebrews",c:"1-4"}, Law:{b:"Numbers",c:"25-28"}, History:{b:"2 Chronicles",c:"6-10"}, Psalms:{b:"Psalms",c:"114-116"}, Poetry:{b:"Proverbs",c:"26-27"}, Prophecy:{b:"Obadiah"}, Gospels:{b:"Acts",c:"1-2"}},
+  {w:40, Epistles:{b:"Hebrews",c:"5-7"}, Law:{b:"Numbers",c:"29-32"}, History:{b:"2 Chronicles",c:"11-15"}, Psalms:{b:"Psalms",c:"117-118"}, Poetry:{b:"Proverbs",c:"28"}, Prophecy:{b:"Jonah"}, Gospels:{b:"Acts",c:"3-4"}},
+  {w:41, Epistles:{b:"Hebrews",c:"8-10"}, Law:{b:"Numbers",c:"33-36"}, History:{b:"2 Chronicles",c:"16-20"}, Psalms:{b:"Psalms",c:"119"}, Poetry:{b:"Proverbs",c:"29-30"}, Prophecy:{b:"Micah"}, Gospels:{b:"Acts",c:"5-6"}},
+  {w:42, Epistles:{b:"Hebrews",c:"11-13"}, Law:{b:"Deuteronomy",c:"1-3"}, History:{b:"2 Chronicles",c:"21-24"}, Psalms:{b:"Psalms",c:"120-121"}, Poetry:{b:"Proverbs",c:"31"}, Prophecy:{b:"Nahum"}, Gospels:{b:"Acts",c:"7-8"}},
+  {w:43, Epistles:{b:"James",c:"1-3"}, Law:{b:"Deuteronomy",c:"4-6"}, History:{b:"2 Chronicles",c:"25-28"}, Psalms:{b:"Psalms",c:"122-124"}, Poetry:{b:"Ecclesiastes",c:"1-2"}, Prophecy:{b:"Habakkuk"}, Gospels:{b:"Acts",c:"9-10"}},
+  {w:44, Epistles:{b:"James",c:"4-5"}, Law:{b:"Deuteronomy",c:"7-9"}, History:{b:"2 Chronicles",c:"29-32"}, Psalms:{b:"Psalms",c:"125-127"}, Poetry:{b:"Ecclesiastes",c:"3-4"}, Prophecy:{b:"Zephaniah"}, Gospels:{b:"Acts",c:"11-12"}},
+  {w:45, Epistles:{b:"1 Peter",c:"1-3"}, Law:{b:"Deuteronomy",c:"10-12"}, History:{b:"2 Chronicles",c:"33-36"}, Psalms:{b:"Psalms",c:"128-130"}, Poetry:{b:"Ecclesiastes",c:"5-6"}, Prophecy:{b:"Haggai"}, Gospels:{b:"Acts",c:"13-14"}},
+  {w:46, Epistles:{b:"1 Peter",c:"4-5"}, Law:{b:"Deuteronomy",c:"13-15"}, History:{b:"Ezra",c:"1-5"}, Psalms:{b:"Psalms",c:"131-133"}, Poetry:{b:"Ecclesiastes",c:"7-8"}, Prophecy:{b:"Zechariah",c:"1-7"}, Gospels:{b:"Acts",c:"15-16"}},
+  {w:47, Epistles:{b:"2 Peter"}, Law:{b:"Deuteronomy",c:"16-19"}, History:{b:"Ezra",c:"6-10"}, Psalms:{b:"Psalms",c:"134-136"}, Poetry:{b:"Ecclesiastes",c:"9-10"}, Prophecy:{b:"Zechariah",c:"8-14"}, Gospels:{b:"Acts",c:"17-18"}},
+  {w:48, Epistles:{b:"1 John",c:"1-3"}, Law:{b:"Deuteronomy",c:"20-22"}, History:{b:"Nehemiah",c:"1-4"}, Psalms:{b:"Psalms",c:"137-139"}, Poetry:{b:"Ecclesiastes",c:"11-12"}, Prophecy:{b:"Malachi"}, Gospels:{b:"Acts",c:"19-20"}},
+  {w:49, Epistles:{b:"1 John",c:"4-5"}, Law:{b:"Deuteronomy",c:"23-25"}, History:{b:"Nehemiah",c:"5-9"}, Psalms:{b:"Psalms",c:"140-142"}, Poetry:{b:"Song of Solomon",c:"1-2"}, Prophecy:{b:"Revelation",c:"1-6"}, Gospels:{b:"Acts",c:"21-22"}},
+  {w:50, Epistles:{b:"2 John"}, Law:{b:"Deuteronomy",c:"26-28"}, History:{b:"Nehemiah",c:"10-13"}, Psalms:{b:"Psalms",c:"143-145"}, Poetry:{b:"Song of Solomon",c:"3-4"}, Prophecy:{b:"Revelation",c:"7-11"}, Gospels:{b:"Acts",c:"23-24"}},
+  {w:51, Epistles:{b:"3 John"}, Law:{b:"Deuteronomy",c:"29-31"}, History:{b:"Nehemiah",c:"1-5"}, Psalms:{b:"Psalms",c:"146-148"}, Poetry:{b:"Song of Solomon",c:"5-6"}, Prophecy:{b:"Revelation",c:"12-17"}, Gospels:{b:"Acts",c:"25-26"}},
+  {w:52, Epistles:{b:"Jude"}, Law:{b:"Deuteronomy",c:"32-34"}, History:{b:"Nehemiah",c:"6-10"}, Psalms:{b:"Psalms",c:"149-150"}, Poetry:{b:"Song of Solomon",c:"7-8"}, Prophecy:{b:"Revelation",c:"18-22"}, Gospels:{b:"Acts",c:"27-28"}},
+];
+
+const PLAN_52WEEK_CATEGORIES = ["Epistles","Law","History","Psalms","Poetry","Prophecy","Gospels"];
+const PLAN_52WEEK_DAY_TO_CATEGORY = {
+  0: 'Epistles', 1: 'Law', 2: 'History', 3: 'Psalms', 4: 'Poetry', 5: 'Prophecy', 6: 'Gospels'
+}; // JS Date.getDay(): 0=Sunday .. 6=Saturday
