@@ -757,7 +757,14 @@
     }
   }
 
+  // Remembers whatever passage is currently shown (a plan day, a search
+  // result, a browsed verse — not just "today") so switching translation
+  // re-shows that same passage in the new translation instead of jumping
+  // back to today's reading.
+  let currentPassage = null;
+
   async function loadPassage(book, chapters, linkEl, highlight){
+    currentPassage = { book, chapters, linkEl, highlight };
     if (activeLink) activeLink.classList.remove('active');
     if (linkEl) linkEl.classList.add('active');
     activeLink = linkEl || null;
@@ -1163,9 +1170,9 @@
     doc.save(planFilename('pdf'));
   };
 
-  // Translation switcher — picking one always jumps back to today's
-  // reading, in that translation, rather than re-showing whatever was
-  // last open.
+  // Translation switcher — re-shows whatever passage is currently open
+  // (a plan day, a search result, a browsed verse) in the new translation,
+  // falling back to today's reading only if nothing has been loaded yet.
   const versionList = document.getElementById('version-list');
   TRANSLATIONS.forEach(t => {
     const btn = document.createElement('button');
@@ -1177,9 +1184,13 @@
     btn.onclick = () => {
       currentTranslation = t;
       versionList.querySelectorAll('.version-btn').forEach(b => b.classList.toggle('active', b.dataset.code === t.code));
-      const { book, chapters } = getTodayEntry();
-      const todayLink = body.querySelector('tr.today td.reading a');
-      loadPassage(book, chapters, todayLink);
+      if (currentPassage){
+        loadPassage(currentPassage.book, currentPassage.chapters, currentPassage.linkEl, currentPassage.highlight);
+      } else {
+        const { book, chapters } = getTodayEntry();
+        const todayLink = body.querySelector('tr.today td.reading a');
+        loadPassage(book, chapters, todayLink);
+      }
     };
     versionList.appendChild(btn);
   });
