@@ -136,6 +136,7 @@
   .today-card .label{ display:none; }
   .today-card .date{ font-size:13.5px; color:var(--muted); margin:10px 0 10px; letter-spacing:.02em; }
   .today-card .reading{ font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--ink); }
+  .today-card .minutes{ margin-top:8px; font-size:12px; color:var(--gold-deep); font-weight:600; letter-spacing:.02em; }
 
   .plan-switch{
     display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
@@ -365,6 +366,7 @@
   <div class="label">Today</div>
   <div class="date" id="today-date"></div>
   <div class="reading" id="today-reading"></div>
+  <div class="minutes" id="today-minutes" hidden></div>
 </div>
 
 <div class="plan-switch" id="plan-switch">
@@ -444,6 +446,13 @@
   <strong>Credit.</strong> This site's daily reading plan was inspired by
   <a href="https://www.goodreads.com/book/show/216313.A_Man_After_God_s_Own_Heart" target="_blank" rel="noopener noreferrer"><em>A Man After God's Own Heart: Devoting Your Life to What Really Matters</em></a>
   by Jim George and Elizabeth George (2002), which includes a one-year daily Bible reading plan.
+  <br/><br/>
+  <strong>Reading time.</strong> The book describes this plan as averaging about 12 minutes a day.
+  Measuring the real word count of every day's reading (via the same passage source this site uses) at a
+  typical 200-words-per-minute silent-reading pace, the actual daily average comes out to roughly
+  <strong>10 minutes</strong> — close to the book's figure, and consistent with it if read at a slightly more
+  deliberate, reflective pace (around 170 wpm) rather than brisk silent reading. Individual days vary widely,
+  from under a minute to nearly 24 minutes, depending on the chapters assigned.
 </div>
 
 <script src="data.js"></script>
@@ -451,6 +460,7 @@
 <script src="data-nt90.js"></script>
 <script src="data-ot60.js"></script>
 <script src="data-bible90.js"></script>
+<script src="data-wordcounts.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function(){
@@ -689,6 +699,23 @@
     return targets;
   }
 
+  // Reading-time estimate, from real per-chapter word counts (WORD_COUNTS,
+  // generated once from the site's own passage source) at a 200 words/min
+  // pace — the commonly cited average for adult silent reading. Falls back
+  // gracefully to null if the word-count data file didn't load.
+  const READING_WPM = 200;
+  function estimateMinutes(book, chapters){
+    if (typeof WORD_COUNTS === 'undefined') return null;
+    const targets = chapterTargets(book, chapters);
+    let words = 0;
+    for (const t of targets){
+      const arr = WORD_COUNTS[t.book];
+      if (!arr || !arr[t.chapter - 1]) return null;
+      words += arr[t.chapter - 1];
+    }
+    return Math.max(1, Math.round(words / READING_WPM));
+  }
+
   const passageEmpty = document.getElementById('passage-empty');
   const passageLoading = document.getElementById('passage-loading');
   const passageContent = document.getElementById('passage-content');
@@ -746,6 +773,7 @@
       ));
 
       passageBody.innerHTML = '';
+      let liveWordCount = 0;
       chapterResults.forEach((data, i) => {
         if (!data || !data.verses){ return; }
         const head = document.createElement('div');
@@ -755,6 +783,7 @@
 
         const p = document.createElement('p');
         data.verses.forEach(v => {
+          liveWordCount += v.text.trim() ? v.text.trim().split(/\s+/).length : 0;
           const span = document.createElement('span');
           span.className = 'verse';
           if (highlight && targets[i].chapter === highlight.chapter &&
@@ -776,7 +805,8 @@
       }
 
       passageTitle.textContent = title;
-      passageSource.textContent = currentTranslation.name;
+      const liveMinutes = liveWordCount ? Math.max(1, Math.round(liveWordCount / READING_WPM)) : null;
+      passageSource.textContent = currentTranslation.name + (liveMinutes ? ' · ~' + liveMinutes + ' min read' : '');
       const gwLink = bibleGatewayUrl(book, chapters);
       if (gwLink){
         passageGatewayLink.href = gwLink;
@@ -791,6 +821,8 @@
     } catch (e) {
       passageTitle.textContent = title;
       passageBody.innerHTML = '<div class="passage-error">Couldn\'t load this passage — try the BibleGateway link instead.</div>';
+      const fallbackMinutes = estimateMinutes(book, chapters);
+      passageSource.textContent = fallbackMinutes ? '~' + fallbackMinutes + ' min read' : '';
       const gwLink = bibleGatewayUrl(book, chapters);
       passageGatewayLink.href = gwLink || '#';
       passageGatewayLink.hidden = !gwLink;
@@ -1163,6 +1195,10 @@
     card.hidden = false;
     document.getElementById('today-date').textContent = now.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
     document.getElementById('today-reading').textContent = formatReading(book, chapters);
+    const minutes = estimateMinutes(book, chapters);
+    const minutesEl = document.getElementById('today-minutes');
+    minutesEl.textContent = minutes ? '~' + minutes + ' min read' : '';
+    minutesEl.hidden = !minutes;
   }
 
   // ---------------- Verse search ----------------
