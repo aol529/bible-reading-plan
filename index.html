@@ -1420,6 +1420,11 @@
   // Show today's reading by default, filling the passage panel before the
   // member has clicked anything.
   switchPlan('daily');
+
+  // Auto-refresh every 12 hours — a tab left open overnight would
+  // otherwise keep showing yesterday's "Today" entry until manually
+  // reloaded.
+  setInterval(() => location.reload(), 12 * 60 * 60 * 1000);
 })();
 </script>
 
