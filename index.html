@@ -1421,10 +1421,16 @@
   // member has clicked anything.
   switchPlan('daily');
 
-  // Auto-refresh every 12 hours — a tab left open overnight would
-  // otherwise keep showing yesterday's "Today" entry until manually
-  // reloaded.
-  setInterval(() => location.reload(), 12 * 60 * 60 * 1000);
+  // Auto-refresh at midnight and noon (not just every N hours from
+  // whenever the tab happened to load) — a tab left open would otherwise
+  // keep showing yesterday's "Today" entry until manually reloaded.
+  (function scheduleNextRefresh(){
+    const now = new Date();
+    const next = new Date(now);
+    next.setMinutes(0, 0, 0);
+    next.setHours(now.getHours() < 12 ? 12 : 24); // 24 rolls over to next midnight
+    setTimeout(() => location.reload(), next - now);
+  })();
 })();
 </script>
 
