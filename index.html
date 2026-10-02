@@ -30,7 +30,7 @@
     background:
       radial-gradient(1200px 500px at 10% -10%, rgba(255,255,255,.5), transparent 60%),
       linear-gradient(180deg, var(--bg-1), var(--bg-2) 340px, var(--bg-2) 100%);
-    padding-bottom:70px;
+    padding-bottom:70px; min-height:100vh;
     -webkit-font-smoothing:antialiased;
   }
   h1,h2,.display{ font-family:'Playfair Display',Georgia,serif; }
@@ -120,6 +120,8 @@
   .browse-loading{ color:var(--muted); font-size:13px; font-style:italic; }
 
   .today-card{
+    display:block; width:calc(100% - 40px); font:inherit; color:inherit; cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
     max-width:460px; margin:28px auto 0; position:relative;
     background:linear-gradient(160deg, var(--surface), var(--surface-2));
     border:1px solid var(--line); border-radius:var(--radius);
@@ -128,12 +130,16 @@
     animation:fadeInUp .7s .05s ease both;
   }
   .today-card::before{
-    content:'Today'; position:absolute; top:-11px; left:50%; transform:translateX(-50%);
+    content:attr(data-badge); position:absolute; top:-11px; left:50%; transform:translateX(-50%);
     background:linear-gradient(135deg, var(--gold), var(--gold-deep)); color:#fff;
     font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:600;
     padding:5px 14px; border-radius:20px; box-shadow:var(--shadow-sm);
   }
-  .today-card .label{ display:none; }
+  .today-card:hover{ transform:translateY(-2px); border-color:var(--gold-light); }
+  .today-card:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
+  .today-card > span{ display:block; }
+  .today-card > span[hidden]{ display:none; }
+  .today-card .open-hint{ margin-top:14px; font-size:12.5px; color:var(--gold-deep); font-weight:600; letter-spacing:.04em; }
   .today-card .date{ font-size:13.5px; color:var(--muted); margin:10px 0 10px; letter-spacing:.02em; }
   .today-card .reading{ font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--ink); }
   .today-card .minutes{ margin-top:8px; font-size:12px; color:var(--gold-deep); font-weight:600; letter-spacing:.02em; }
@@ -166,6 +172,14 @@
     color:var(--gold-deep); cursor:pointer; transition:background .15s ease, border-color .15s ease;
   }
   .download-btn:hover{ background:var(--surface-2); border-color:var(--gold-light); }
+
+  .back-bar{ max-width:1160px; margin:0 auto; padding:22px 20px 0; }
+  .back-home-btn{
+    font-family:'Lora',serif; font-size:13px; font-weight:600; padding:8px 16px;
+    border-radius:8px; border:1px solid var(--line); background:var(--surface);
+    color:var(--gold-deep); cursor:pointer; box-shadow:var(--shadow-sm);
+  }
+  .back-home-btn:hover{ border-color:var(--gold-light); }
 
   .week-nav{
     display:flex; align-items:center; gap:14px; max-width:900px;
@@ -351,6 +365,8 @@
 
 <div class="topbar"></div>
 
+<div id="home-view">
+
 <header>
   <div class="eyebrow">Daily Reading Plan</div>
   <h1>A Man After God's Own Heart</h1>
@@ -373,12 +389,12 @@
   <div class="browse-grid" id="browse-grid"></div>
 </div>
 
-<div class="today-card" id="today-card" hidden>
-  <div class="label">Today</div>
-  <div class="date" id="today-date"></div>
-  <div class="reading" id="today-reading"></div>
-  <div class="minutes" id="today-minutes" hidden></div>
-</div>
+<button type="button" class="today-card" id="today-card" data-badge="Today" hidden>
+  <span class="date" id="today-date"></span>
+  <span class="reading" id="today-reading"></span>
+  <span class="minutes" id="today-minutes" hidden></span>
+  <span class="open-hint">Open reading &#8250;</span>
+</button>
 
 <div class="plan-switch" id="plan-switch">
   <button type="button" class="plan-switch-btn active" data-plan="daily">Daily Plan</button>
@@ -393,6 +409,14 @@
   <button type="button" id="download-txt" class="download-btn">.txt</button>
   <button type="button" id="download-csv" class="download-btn">.csv</button>
   <button type="button" id="download-pdf" class="download-btn">.pdf</button>
+</div>
+
+</div>
+
+<div id="reading-view" hidden>
+
+<div class="back-bar">
+  <button type="button" id="back-home-btn" class="back-home-btn">&#8592; Back</button>
 </div>
 
 <nav class="months" id="month-nav"></nav>
@@ -468,6 +492,8 @@
   <strong>10 minutes</strong> — close to the book's figure, and consistent with it if read at a slightly more
   deliberate, reflective pace (around 170 wpm) rather than brisk silent reading. Individual days vary widely,
   from under a minute to nearly 24 minutes, depending on the chapters assigned.
+</div>
+
 </div>
 
 <script src="data.js"></script>
@@ -1279,19 +1305,58 @@
   // Today card — reflects whichever plan is currently active.
   function updateTodayCard(){
     const card = document.getElementById('today-card');
-    // Day-sequence plans (NT-90/OT-60/Bible-90) have no calendar anchor —
-    // "today" isn't a meaningful concept for them, so the hero card hides.
-    if (activePlan !== 'daily' && activePlan !== '52week'){ card.hidden = true; return; }
-    const { book, chapters } = activePlan === '52week' ? getTodayWeekEntry() : getTodayEntry();
-    if (!book){ card.hidden = true; return; }
+    const dateEl = document.getElementById('today-date');
+    let book, chapters;
+    // Day-sequence plans (NT-90/OT-60/Bible-90) have no calendar anchor, so
+    // "today" isn't meaningful for them — the card shows Day 1 instead, and
+    // still acts as the way into the reading view.
+    if (activePlan in DAY_PLANS){
+      const firstEntry = DAY_PLANS[activePlan].data.find(d => d.d === 1);
+      const firstSeg = firstEntry && firstEntry.s[0];
+      if (!firstSeg){ card.hidden = true; return; }
+      book = firstSeg.b; chapters = firstSeg.c || null;
+      card.dataset.badge = 'Start';
+      dateEl.textContent = 'Day 1 of ' + PLAN_NAMES[activePlan];
+    } else {
+      ({ book, chapters } = activePlan === '52week' ? getTodayWeekEntry() : getTodayEntry());
+      if (!book){ card.hidden = true; return; }
+      card.dataset.badge = 'Today';
+      dateEl.textContent = now.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+    }
     card.hidden = false;
-    document.getElementById('today-date').textContent = now.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
     document.getElementById('today-reading').textContent = formatReading(book, chapters);
     const minutes = estimateMinutes(book, chapters);
     const minutesEl = document.getElementById('today-minutes');
     minutesEl.textContent = minutes ? '~' + minutes + ' min read' : '';
     minutesEl.hidden = !minutes;
   }
+
+  // ---------------- Home / reading view ----------------
+  // The home screen ends at the download row; everything below it (tables,
+  // passage, translations, credit) lives in a separate reading view that
+  // replaces the home screen. Opening it pushes a history entry so the
+  // phone/browser back button returns home too.
+  const homeView = document.getElementById('home-view');
+  const readingView = document.getElementById('reading-view');
+
+  function showReadingView(){
+    if (!readingView.hidden) return;
+    homeView.hidden = true;
+    readingView.hidden = false;
+    history.pushState({ view: 'reading' }, '');
+    window.scrollTo(0, 0);
+  }
+
+  function showHomeView(){
+    stopSpeech();
+    readingView.hidden = true;
+    homeView.hidden = false;
+    window.scrollTo(0, 0);
+  }
+
+  document.getElementById('today-card').onclick = showReadingView;
+  document.getElementById('back-home-btn').onclick = () => history.back();
+  window.addEventListener('popstate', () => { if (!readingView.hidden) showHomeView(); });
 
   // ---------------- Verse search ----------------
   const verseSearchForm = document.getElementById('verse-search');
@@ -1309,6 +1374,7 @@
       return;
     }
     verseSearchError.hidden = true;
+    showReadingView();
     loadPassage(result.book, String(result.chapter), null, result.verse ? result : null);
   });
 
@@ -1406,6 +1472,7 @@
         btn.className = 'browse-item';
         btn.textContent = v.verse;
         btn.onclick = () => {
+          showReadingView();
           loadPassage(book, String(chapter), null, { chapter, verse: v.verse, verseEnd: null });
         };
         browseGrid.appendChild(btn);
