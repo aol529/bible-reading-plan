@@ -41,6 +41,7 @@
   <span class="date" id="today-date"></span>
   <span class="reading" id="today-reading"></span>
   <span class="minutes" id="today-minutes" hidden></span>
+  <span class="progress-line" id="today-progress"></span>
   <span class="open-hint">Open reading &#8250;</span>
 </button>
 
@@ -65,6 +66,10 @@
 
 <div class="back-bar">
   <button type="button" id="back-home-btn" class="back-home-btn">&#8592; Back</button>
+  <div class="plan-progress">
+    <span id="plan-progress-text"></span>
+    <div class="plan-progress-track"><div class="plan-progress-fill" id="plan-progress-fill"></div></div>
+  </div>
 </div>
 
 <nav class="months" id="month-nav"></nav>
@@ -87,7 +92,7 @@
   <div class="table-col" id="daily-col">
     <table id="plan-table">
       <caption id="table-caption"></caption>
-      <thead><tr><th>Date</th><th class="book">Book</th><th class="reading">Chapters</th></tr></thead>
+      <thead><tr><th>Date</th><th class="book">Book</th><th class="reading">Chapters</th><th class="check" aria-label="Read"></th></tr></thead>
       <tbody id="plan-body"></tbody>
     </table>
   </div>
@@ -95,7 +100,7 @@
   <div class="table-col" id="week-col" hidden>
     <table id="week-table">
       <caption id="week-caption"></caption>
-      <thead><tr><th>Category</th><th class="book">Book</th><th class="reading">Chapters</th></tr></thead>
+      <thead><tr><th>Category</th><th class="book">Book</th><th class="reading">Chapters</th><th class="check" aria-label="Read"></th></tr></thead>
       <tbody id="week-body"></tbody>
     </table>
   </div>
@@ -103,7 +108,7 @@
   <div class="table-col" id="days-col" hidden>
     <table id="days-table">
       <caption id="days-caption"></caption>
-      <thead><tr><th>Day</th><th class="reading">Reading</th></tr></thead>
+      <thead><tr><th>Day</th><th class="reading">Reading</th><th class="check" aria-label="Read"></th></tr></thead>
       <tbody id="days-body"></tbody>
     </table>
   </div>
@@ -118,6 +123,14 @@
       </div>
       <div class="passage-source" id="passage-source"></div>
       <div id="passage-body"></div>
+      <div class="plan-bar" id="plan-bar" hidden>
+        <div class="plan-bar-label" id="plan-bar-label"></div>
+        <div class="plan-bar-buttons">
+          <button type="button" id="plan-bar-prev">&#8249; Prev</button>
+          <button type="button" id="plan-bar-done" class="plan-bar-done">Mark as read</button>
+          <button type="button" id="plan-bar-next">Next &#8250;</button>
+        </div>
+      </div>
       <a id="passage-gateway-link" class="passage-gw-link" target="_blank" rel="noopener noreferrer">View on BibleGateway (NIV) &#8599;</a>
     </div>
   </aside>

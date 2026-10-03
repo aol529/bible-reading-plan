@@ -132,6 +132,7 @@ header p{ margin:14px 0 0; color:var(--muted); font-size:14.5px; font-style:ital
 .today-card .open-hint{ margin-top:14px; font-size:12.5px; color:var(--gold-deep); font-weight:600; letter-spacing:.04em; }
 .today-card .date{ font-size:13.5px; color:var(--muted); margin:10px 0 10px; letter-spacing:.02em; }
 .today-card .reading{ font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--ink); }
+.today-card .progress-line{ margin-top:6px; font-size:12px; color:var(--muted); }
 .today-card .minutes{ margin-top:8px; font-size:12px; color:var(--gold-deep); font-weight:600; letter-spacing:.02em; }
 
 .plan-switch{
@@ -163,7 +164,16 @@ header p{ margin:14px 0 0; color:var(--muted); font-size:14.5px; font-style:ital
 }
 .download-btn:hover{ background:var(--surface-2); border-color:var(--gold-light); }
 
-.back-bar{ max-width:1160px; margin:0 auto; padding:22px 20px 0; }
+.back-bar{
+  max-width:1160px; margin:0 auto; padding:22px 20px 0;
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+}
+.plan-progress{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
+.plan-progress-track{ width:120px; height:6px; border-radius:3px; background:var(--line); overflow:hidden; }
+.plan-progress-fill{
+  width:0; height:100%; background:linear-gradient(90deg, var(--gold), var(--gold-deep));
+  transition:width .3s ease;
+}
 .back-home-btn{
   font-family:'Lora',serif; font-size:13px; font-weight:600; padding:8px 16px;
   border-radius:8px; border:1px solid var(--line); background:var(--surface);
@@ -240,6 +250,11 @@ tr.today td.day::before{
   content:''; position:absolute; left:-26px; top:0; bottom:0; width:3px;
   background:var(--gold);
 }
+th.check, td.check{ width:24px; padding:9px 0 9px 6px; text-align:center; }
+td.check input{ width:17px; height:17px; margin:0; vertical-align:middle; accent-color:var(--gold); cursor:pointer; }
+tr.done td.day, tr.done td.book{ color:var(--muted-2); }
+tr.done td.reading a{ color:var(--muted); text-decoration:line-through; text-decoration-color:rgba(var(--gold-rgb),.5); }
+tr.done td.reading a.active{ color:#fff; }
 tr td .flag{ color:var(--gold); cursor:help; margin-left:5px; font-size:12px; }
 
 td.reading a{
@@ -294,6 +309,24 @@ td.reading a.active{ background:var(--gold); color:#fff; }
 .verse-highlight{
   background:rgba(var(--gold-rgb),.22); border-radius:3px; padding:1px 2px;
   box-shadow:0 0 0 1px rgba(var(--gold-rgb),.35);
+}
+.plan-bar{ margin-top:22px; padding-top:16px; border-top:1px solid var(--line-soft); }
+.plan-bar-label{
+  font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+  text-align:center; margin-bottom:10px;
+}
+.plan-bar-buttons{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.plan-bar-buttons button{
+  font-family:'Lora',serif; font-size:13px; font-weight:600; padding:8px 14px;
+  border-radius:8px; border:1px solid var(--line); background:var(--surface);
+  color:var(--gold-deep); cursor:pointer; box-shadow:var(--shadow-sm);
+  transition:background .15s ease, border-color .15s ease, color .15s ease;
+}
+.plan-bar-buttons button:hover:not(:disabled){ border-color:var(--gold-light); }
+.plan-bar-buttons button:disabled{ opacity:.4; cursor:default; }
+.plan-bar-buttons .plan-bar-done.done{ background:rgba(var(--gold-rgb),.12); border-color:var(--gold-light); }
+.plan-bar-buttons .primary{
+  background:linear-gradient(135deg, var(--gold), var(--gold-deep)); color:#fff; border-color:var(--gold-deep);
 }
 .passage-gw-link{
   display:inline-flex; align-items:center; gap:6px; margin-top:18px; font-size:12.5px;

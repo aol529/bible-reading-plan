@@ -350,11 +350,18 @@
   // Remembers whatever passage is currently shown (a plan day, a search
   // result, a browsed verse — not just "today") so switching translation
   // re-shows that same passage in the new translation instead of jumping
-  // back to today's reading.
+  // back to today's reading. ref is the passage's place in the active plan
+  // ({ plan, index, seg } — see getUnits) when it was opened from a plan,
+  // or null for a search/browse result, which has no "next day".
   let currentPassage = null;
+  // Bumped on every load, so a slow fetch that finishes after a newer one
+  // (e.g. tapping Next several times quickly) can't overwrite it.
+  let loadSeq = 0;
 
-  async function loadPassage(book, chapters, linkEl, highlight){
-    currentPassage = { book, chapters, linkEl, highlight };
+  async function loadPassage(book, chapters, linkEl, highlight, ref){
+    const seq = ++loadSeq;
+    currentPassage = { book, chapters, linkEl, highlight, ref: ref || null };
+    updatePlanBar();
     if (activeLink) activeLink.classList.remove('active');
     if (linkEl) linkEl.classList.add('active');
     activeLink = linkEl || null;
@@ -370,6 +377,7 @@
         fetch('https://bible-api.com/' + encodeURIComponent(t.book + ' ' + t.chapter) + '?translation=' + currentTranslation.code)
           .then(r => r.json())
       ));
+      if (seq !== loadSeq) return;
 
       passageBody.innerHTML = '';
       let liveWordCount = 0;
@@ -419,12 +427,14 @@
       } else {
         passageGatewayLink.hidden = true;
       }
+      passagePanel.scrollTop = 0;
       showPanelState('content');
 
       const hit = document.getElementById('search-hit');
       if (hit) hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
       else scrollPassageIntoViewIfNeeded();
     } catch (e) {
+      if (seq !== loadSeq) return;
       passageListenBtn.hidden = true;
       passageTitle.textContent = title;
       passageBody.innerHTML = '<div class="passage-error">Couldn\'t load this passage — try the BibleGateway link instead.</div>';
@@ -438,7 +448,7 @@
     }
   }
 
-  function renderMonth(month){
+  function renderMonth(month, scrollToToday = true){
     nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.month === month));
     caption.textContent = month;
     body.innerHTML = '';
@@ -449,6 +459,8 @@
       const tr = document.createElement('tr');
       const isToday = month === todayMonth && entry.d === todayDate;
       if (isToday) tr.className = 'today';
+      const key = 'daily:' + month + ':' + entry.d;
+      markRow(tr, key);
 
       const dayTd = document.createElement('td');
       dayTd.className = 'day';
@@ -469,7 +481,7 @@
       a.onclick = function(e){
         if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return; // let modified/middle clicks open normally
         e.preventDefault();
-        loadPassage(bookForClick, chaptersForClick, a);
+        loadPassage(bookForClick, chaptersForClick, a, null, refFor('daily', key, 0));
       };
       chaptersTd.appendChild(a);
       const note = FLAG_NOTES[entry.d + '|' + month];
@@ -484,10 +496,11 @@
       tr.appendChild(dayTd);
       tr.appendChild(bookTd);
       tr.appendChild(chaptersTd);
+      tr.appendChild(makeCheckCell(key));
       body.appendChild(tr);
     });
 
-    if (isTodayVisibleMonth(month)){
+    if (scrollToToday && isTodayVisibleMonth(month)){
       const todayRow = body.querySelector('tr.today');
       if (todayRow) todayRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
@@ -521,6 +534,8 @@
       const isToday = selectedWeek === currentWeekNum && cat === currentCategory;
       const tr = document.createElement('tr');
       if (isToday) tr.className = 'today';
+      const key = '52week:' + selectedWeek + ':' + cat;
+      markRow(tr, key);
 
       const catTd = document.createElement('td');
       catTd.className = 'day';
@@ -540,13 +555,14 @@
       a.onclick = function(ev){
         if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
         ev.preventDefault();
-        loadPassage(e.b, e.c || null, a);
+        loadPassage(e.b, e.c || null, a, null, refFor('52week', key, 0));
       };
       chaptersTd.appendChild(a);
 
       tr.appendChild(catTd);
       tr.appendChild(bookTd);
       tr.appendChild(chaptersTd);
+      tr.appendChild(makeCheckCell(key));
       weekBody.appendChild(tr);
     });
     syncPassageHeight();
@@ -584,6 +600,9 @@
 
     const entry = plan.data.find(d => d.d === selectedDay);
     const tr = document.createElement('tr');
+    const key = planKey + ':' + selectedDay;
+    const hasReading = entry && entry.s.length;
+    if (hasReading) markRow(tr, key);
 
     const dayTd = document.createElement('td');
     dayTd.className = 'day';
@@ -603,7 +622,7 @@
         a.onclick = function(ev){
           if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
           ev.preventDefault();
-          loadPassage(seg.b, seg.c || null, a);
+          loadPassage(seg.b, seg.c || null, a, null, refFor(planKey, key, i));
         };
         readingTd.appendChild(a);
       });
@@ -611,6 +630,8 @@
 
     tr.appendChild(dayTd);
     tr.appendChild(readingTd);
+    if (hasReading) tr.appendChild(makeCheckCell(key));
+    else tr.appendChild(Object.assign(document.createElement('td'), { className: 'check' }));
     daysBody.appendChild(tr);
     syncPassageHeight();
   }
@@ -650,19 +671,193 @@
       renderWeek(currentWeekNum);
       const { book, chapters } = getTodayWeekEntry();
       const todayLink = weekBody.querySelector('tr.today td.reading a');
-      loadPassage(book, chapters, todayLink);
+      loadPassage(book, chapters, todayLink, null, refFor(plan, todayKey(plan), 0));
     } else if (isDayPlan){
       activeDayPlanKey = plan;
-      renderDayPlan(plan, 1);
-      const firstEntry = DAY_PLANS[plan].data.find(d => d.d === 1);
-      const firstSeg = firstEntry && firstEntry.s[0];
-      const firstLink = daysBody.querySelector('td.reading a');
-      if (firstSeg) loadPassage(firstSeg.b, firstSeg.c || null, firstLink);
+      openUnit(plan, firstUnreadIndex(plan), 0);
     } else {
       const { book, chapters } = getTodayEntry();
       const todayLink = body.querySelector('tr.today td.reading a');
-      loadPassage(book, chapters, todayLink);
+      loadPassage(book, chapters, todayLink, null, refFor(plan, todayKey(plan), 0));
     }
+    updateProgressSummary();
+  }
+
+  // ---------------- Progress tracking ----------------
+  // Every plan flattens into an ordered list of "units" — the things a
+  // reader ticks off: a calendar day (Daily), one category of one week
+  // (52-Week), or a numbered day (NT-90/OT-60/Bible-90; grace days with no
+  // reading are skipped). Each unit has a stable key, so ticks survive the
+  // tables being re-rendered. Progress lives in this browser's localStorage
+  // only — it doesn't sync between devices.
+  const unitCache = {};
+  function getUnits(plan){
+    if (unitCache[plan]) return unitCache[plan];
+    const units = [];
+    if (plan === 'daily'){
+      let currentBook = '';
+      MONTHS.forEach(month => {
+        READING_PLAN[month].forEach(entry => {
+          if (entry.b) currentBook = entry.b;
+          units.push({ key: 'daily:' + month + ':' + entry.d, label: month + ' ' + entry.d,
+            segs: [{ b: currentBook, c: entry.c || null }], month });
+        });
+      });
+    } else if (plan === '52week'){
+      PLAN_52WEEK.forEach(w => {
+        PLAN_52WEEK_CATEGORIES.forEach(cat => {
+          const e = w[cat];
+          units.push({ key: '52week:' + w.w + ':' + cat, label: 'Week ' + w.w + ' · ' + cat,
+            segs: [{ b: e.b, c: e.c || null }], week: w.w });
+        });
+      });
+    } else {
+      DAY_PLANS[plan].data.forEach(d => {
+        if (!d.s.length) return;
+        units.push({ key: plan + ':' + d.d, label: 'Day ' + d.d,
+          segs: d.s.map(seg => ({ b: seg.b, c: seg.c || null })), day: d.d });
+      });
+    }
+    units.byKey = {};
+    units.forEach((u, i) => { units.byKey[u.key] = i; });
+    return unitCache[plan] = units;
+  }
+
+  function refFor(plan, key, seg){
+    const index = getUnits(plan).byKey[key];
+    return index === undefined ? null : { plan, index, seg };
+  }
+
+  function todayKey(plan){
+    return plan === '52week'
+      ? '52week:' + currentWeekNum + ':' + currentCategory
+      : 'daily:' + todayMonth + ':' + todayDate;
+  }
+
+  const PROGRESS_STORAGE_KEY = 'brp-progress-v1';
+  let progress = {};
+  try { progress = JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY)) || {}; } catch (e) {}
+
+  function isDone(key){ return !!progress[key]; }
+
+  function setDone(key, done){
+    if (done) progress[key] = 1;
+    else delete progress[key];
+    try { localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress)); } catch (e) {}
+    refreshProgressUI();
+  }
+
+  function doneCount(plan){
+    return getUnits(plan).filter(u => isDone(u.key)).length;
+  }
+
+  // Where a day-sequence plan picks up: the first day not yet ticked off
+  // (or the last day, once the whole plan is finished).
+  function firstUnreadIndex(plan){
+    const units = getUnits(plan);
+    const i = units.findIndex(u => !isDone(u.key));
+    return i === -1 ? units.length - 1 : i;
+  }
+
+  function markRow(tr, key){
+    tr.dataset.key = key;
+    tr.classList.toggle('done', isDone(key));
+  }
+
+  function makeCheckCell(key){
+    const td = document.createElement('td');
+    td.className = 'check';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = isDone(key);
+    box.setAttribute('aria-label', 'Mark as read');
+    box.onchange = () => setDone(key, box.checked);
+    td.appendChild(box);
+    return td;
+  }
+
+  // Shows a unit in the reading view: brings its month/week/day into the
+  // table, then loads the requested segment (a day-sequence day can span
+  // several books, each its own segment) into the passage panel.
+  function openUnit(plan, index, seg){
+    const unit = getUnits(plan)[index];
+    if (!unit) return;
+    let tbody;
+    if (plan === 'daily'){ renderMonth(unit.month, false); tbody = body; }
+    else if (plan === '52week'){ renderWeek(unit.week); tbody = weekBody; }
+    else { renderDayPlan(plan, unit.day); tbody = daysBody; }
+    const row = tbody.querySelector('tr[data-key="' + unit.key + '"]');
+    const link = row ? row.querySelectorAll('td.reading a')[seg] : null;
+    loadPassage(unit.segs[seg].b, unit.segs[seg].c, link || null, null, { plan, index, seg });
+  }
+
+  // Prev/Next walk segment by segment through a multi-book day before
+  // moving on to the neighbouring unit.
+  function stepUnit(dir){
+    const ref = currentPassage && currentPassage.ref;
+    if (!ref) return;
+    const units = getUnits(ref.plan);
+    let { index, seg } = ref;
+    if (dir > 0){
+      if (seg < units[index].segs.length - 1) seg++;
+      else if (index < units.length - 1){ index++; seg = 0; }
+      else return;
+    } else {
+      if (seg > 0) seg--;
+      else if (index > 0){ index--; seg = 0; }
+      else return;
+    }
+    openUnit(ref.plan, index, seg);
+  }
+
+  const planBar = document.getElementById('plan-bar');
+  const planBarLabel = document.getElementById('plan-bar-label');
+  const planBarPrev = document.getElementById('plan-bar-prev');
+  const planBarDone = document.getElementById('plan-bar-done');
+  const planBarNext = document.getElementById('plan-bar-next');
+
+  function updatePlanBar(){
+    const ref = currentPassage && currentPassage.ref;
+    planBar.hidden = !ref;
+    if (!ref) return;
+    const units = getUnits(ref.plan);
+    const unit = units[ref.index];
+    const done = isDone(unit.key);
+    planBarLabel.textContent = unit.label +
+      (unit.segs.length > 1 ? ' · part ' + (ref.seg + 1) + ' of ' + unit.segs.length : '');
+    planBarDone.textContent = done ? '\u2713 Read' : 'Mark as read';
+    planBarDone.classList.toggle('done', done);
+    planBarPrev.disabled = ref.index === 0 && ref.seg === 0;
+    planBarNext.disabled = ref.index === units.length - 1 && ref.seg === unit.segs.length - 1;
+    planBarNext.classList.toggle('primary', done);
+  }
+
+  planBarPrev.onclick = () => stepUnit(-1);
+  planBarNext.onclick = () => stepUnit(1);
+  planBarDone.onclick = () => {
+    const ref = currentPassage && currentPassage.ref;
+    if (!ref) return;
+    const key = getUnits(ref.plan)[ref.index].key;
+    setDone(key, !isDone(key));
+  };
+
+  function updateProgressSummary(){
+    const total = getUnits(activePlan).length;
+    const done = doneCount(activePlan);
+    document.getElementById('plan-progress-text').textContent = done + ' of ' + total + ' read';
+    document.getElementById('plan-progress-fill').style.width = (total ? done / total * 100 : 0) + '%';
+  }
+
+  function refreshProgressUI(){
+    document.querySelectorAll('tr[data-key]').forEach(tr => {
+      const done = isDone(tr.dataset.key);
+      tr.classList.toggle('done', done);
+      const box = tr.querySelector('td.check input');
+      if (box) box.checked = done;
+    });
+    updatePlanBar();
+    updateProgressSummary();
+    updateTodayCard();
   }
 
   document.querySelectorAll('.plan-switch-btn').forEach(btn => {
@@ -786,7 +981,7 @@
       currentTranslation = t;
       versionList.querySelectorAll('.version-btn').forEach(b => b.classList.toggle('active', b.dataset.code === t.code));
       if (currentPassage){
-        loadPassage(currentPassage.book, currentPassage.chapters, currentPassage.linkEl, currentPassage.highlight);
+        loadPassage(currentPassage.book, currentPassage.chapters, currentPassage.linkEl, currentPassage.highlight, currentPassage.ref);
       } else {
         const { book, chapters } = getTodayEntry();
         const todayLink = body.querySelector('tr.today td.reading a');
@@ -796,33 +991,42 @@
     versionList.appendChild(btn);
   });
 
-  // Today card — reflects whichever plan is currently active.
+  // Today card — reflects whichever plan is currently active, and is the
+  // way into the reading view. cardRef is the unit it shows, so tapping
+  // the card opens exactly that reading.
+  let cardRef = null;
   function updateTodayCard(){
     const card = document.getElementById('today-card');
     const dateEl = document.getElementById('today-date');
-    let book, chapters;
+    const units = getUnits(activePlan);
+    const isDayPlan = activePlan in DAY_PLANS;
     // Day-sequence plans (NT-90/OT-60/Bible-90) have no calendar anchor, so
-    // "today" isn't meaningful for them — the card shows Day 1 instead, and
-    // still acts as the way into the reading view.
-    if (activePlan in DAY_PLANS){
-      const firstEntry = DAY_PLANS[activePlan].data.find(d => d.d === 1);
-      const firstSeg = firstEntry && firstEntry.s[0];
-      if (!firstSeg){ card.hidden = true; return; }
-      book = firstSeg.b; chapters = firstSeg.c || null;
-      card.dataset.badge = 'Start';
-      dateEl.textContent = 'Day 1 of ' + PLAN_NAMES[activePlan];
-    } else {
-      ({ book, chapters } = activePlan === '52week' ? getTodayWeekEntry() : getTodayEntry());
-      if (!book){ card.hidden = true; return; }
-      card.dataset.badge = 'Today';
-      dateEl.textContent = now.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
-    }
+    // "today" isn't meaningful for them — the card shows the first day not
+    // yet read instead.
+    const index = isDayPlan ? firstUnreadIndex(activePlan) : units.byKey[todayKey(activePlan)];
+    const unit = units[index];
+    if (!unit){ card.hidden = true; cardRef = null; return; }
+    cardRef = { plan: activePlan, index, seg: 0 };
     card.hidden = false;
-    document.getElementById('today-reading').textContent = formatReading(book, chapters);
-    const minutes = estimateMinutes(book, chapters);
+    card.dataset.badge = isDayPlan ? 'Up next' : 'Today';
+    dateEl.textContent = isDayPlan
+      ? unit.label + ' of ' + PLAN_NAMES[activePlan]
+      : now.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+    document.getElementById('today-reading').textContent = unit.segs.map(seg => formatReading(seg.b, seg.c)).join(', ');
+
+    let minutes = 0;
+    for (const seg of unit.segs){
+      const m = estimateMinutes(seg.b, seg.c);
+      if (!m){ minutes = null; break; }
+      minutes += m;
+    }
+    const details = [];
+    if (minutes) details.push('~' + minutes + ' min read');
+    if (isDone(unit.key)) details.push('\u2713 Read');
     const minutesEl = document.getElementById('today-minutes');
-    minutesEl.textContent = minutes ? '~' + minutes + ' min read' : '';
-    minutesEl.hidden = !minutes;
+    minutesEl.textContent = details.join(' · ');
+    minutesEl.hidden = !details.length;
+    document.getElementById('today-progress').textContent = doneCount(activePlan) + ' of ' + units.length + ' read';
   }
 
   // ---------------- Home / reading view ----------------
@@ -848,7 +1052,12 @@
     window.scrollTo(0, 0);
   }
 
-  document.getElementById('today-card').onclick = showReadingView;
+  document.getElementById('today-card').onclick = () => {
+    showReadingView();
+    const ref = currentPassage && currentPassage.ref;
+    const alreadyOpen = ref && cardRef && ref.plan === cardRef.plan && ref.index === cardRef.index && ref.seg === cardRef.seg;
+    if (cardRef && !alreadyOpen) openUnit(cardRef.plan, cardRef.index, cardRef.seg);
+  };
   document.getElementById('back-home-btn').onclick = () => history.back();
   window.addEventListener('popstate', () => { if (!readingView.hidden) showHomeView(); });
 
