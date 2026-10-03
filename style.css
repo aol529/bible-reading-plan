@@ -314,7 +314,7 @@ td.reading a:hover{ background:rgba(var(--gold-rgb),.12); color:var(--ink); }
 td.reading a.active{ background:var(--accent-solid); color:#fff; }
 
 .passage-panel{
-  flex:1 1 340px; min-width:290px;
+  flex:1 1 340px; min-width:290px; position:sticky; top:16px;
   background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
   box-shadow:var(--shadow-md);
   padding:26px 32px 10px; max-height:none; overflow-y:auto;
