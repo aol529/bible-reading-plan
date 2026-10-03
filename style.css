@@ -319,6 +319,11 @@ td.reading a.active{ background:var(--accent-solid); color:#fff; }
   box-shadow:var(--shadow-md);
   padding:26px 32px 10px; max-height:none; overflow-y:auto;
 }
+/* Alone in the row (Daily plan with its month table closed): keep a
+   readable line length instead of stretching across the whole page. */
+@media (min-width:761px){
+  main:not(:has(.table-col:not([hidden]))) .passage-panel{ max-width:820px; margin:0 auto; }
+}
 .passage-panel::-webkit-scrollbar{ width:8px; }
 .passage-panel::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
 .passage-panel::-webkit-scrollbar-thumb:hover{ background:var(--muted-2); }

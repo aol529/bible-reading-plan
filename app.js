@@ -298,10 +298,11 @@
   // day-sequence plans' one-row table would otherwise leave a sliver, and
   // never taller than the window: past that the panel is sticky (see
   // style.css), staying in view while the reader scrolls a long table.
-  // On narrow screens the panel stacks below the table, so the CSS sizes
-  // it to the viewport instead and this leaves it alone. Measuring only
-  // works while the reading view is showing (hidden tables measure 0), so
-  // showReadingView() calls this again.
+  // With no table showing (the Daily month table starts closed), the
+  // panel just fills the window height. On narrow screens the panel and
+  // table stack, so the CSS sizes it to the viewport instead and this
+  // leaves it alone. Measuring only works while the reading view is
+  // showing (hidden tables measure 0), so showReadingView() calls this.
   const MIN_PANEL_HEIGHT = 480;
   const PANEL_STICKY_TOP = 16; // keep in sync with .passage-panel top in style.css
   const narrowScreen = window.matchMedia('(max-width:760px)');
@@ -309,12 +310,11 @@
     if (narrowScreen.matches){ passagePanel.style.height = ''; return; }
     const ref = activePlan === '52week' ? weekCol
       : (activePlan in DAY_PLANS ? daysCol : dailyCol);
-    if (!ref || ref.hidden) return;
+    if (readingView.hidden) return;
+    const maxH = window.innerHeight - 2 * PANEL_STICKY_TOP;
+    if (!ref || ref.hidden){ passagePanel.style.height = maxH + 'px'; return; }
     const h = ref.getBoundingClientRect().height;
-    if (h > 0){
-      const maxH = window.innerHeight - 2 * PANEL_STICKY_TOP;
-      passagePanel.style.height = Math.min(Math.max(h, MIN_PANEL_HEIGHT), maxH) + 'px';
-    }
+    if (h > 0) passagePanel.style.height = Math.min(Math.max(h, MIN_PANEL_HEIGHT), maxH) + 'px';
   }
   window.addEventListener('resize', () => syncPassageHeight());
   // Google Fonts load asynchronously — the table's row height (and so its
@@ -447,8 +447,20 @@
     }
   }
 
+  // The Daily plan's month table starts closed — the passage is the main
+  // thing — and opens when a month button is tapped. Navigating the plan
+  // (Prev/Next, the home card) still renders the right month into it, so
+  // it's current whenever it's opened.
+  let monthTableOpen = false;
+  let shownMonth = null;
+  function updateMonthButtons(){
+    nav.querySelectorAll('button').forEach(b =>
+      b.classList.toggle('active', monthTableOpen && b.dataset.month === shownMonth));
+  }
+
   function renderMonth(month, scrollToToday = true){
-    nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.month === month));
+    shownMonth = month;
+    updateMonthButtons();
     caption.textContent = month;
     body.innerHTML = '';
 
@@ -512,7 +524,19 @@
     btn.type = 'button';
     btn.textContent = month.slice(0,3);
     btn.dataset.month = month;
-    btn.onclick = () => renderMonth(month);
+    btn.onclick = () => {
+      // Tapping the open month again closes the table.
+      if (monthTableOpen && shownMonth === month){
+        monthTableOpen = false;
+        dailyCol.hidden = true;
+        updateMonthButtons();
+        syncPassageHeight();
+        return;
+      }
+      monthTableOpen = true;
+      dailyCol.hidden = false;
+      renderMonth(month);
+    };
     nav.appendChild(btn);
   });
 
@@ -659,7 +683,7 @@
     const isDayPlan = plan in DAY_PLANS;
 
     nav.hidden = isWeek || isDayPlan;
-    dailyCol.hidden = isWeek || isDayPlan;
+    dailyCol.hidden = isWeek || isDayPlan || !monthTableOpen;
     weekNavEl.hidden = !isWeek;
     weekCol.hidden = !isWeek;
     dayNavEl.hidden = !isDayPlan;
