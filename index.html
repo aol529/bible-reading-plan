@@ -67,6 +67,15 @@
   <button type="button" id="download-pdf" class="download-btn">.pdf</button>
 </div>
 
+<div class="download-row">
+  <span class="download-label">Progress:</span>
+  <button type="button" id="progress-export" class="download-btn" title="Save your ticks for every plan to a file">Export</button>
+  <button type="button" id="progress-import" class="download-btn" title="Load ticks from an exported file (adds to what's here)">Import</button>
+  <button type="button" id="progress-reset" class="download-btn"></button>
+  <input type="file" id="progress-import-file" accept=".json,application/json" hidden/>
+</div>
+<div class="progress-status" id="progress-status" hidden></div>
+
 </div>
 
 <div id="reading-view" hidden>
@@ -136,9 +145,9 @@
       <div class="plan-bar" id="plan-bar" hidden>
         <div class="plan-bar-label" id="plan-bar-label"></div>
         <div class="plan-bar-buttons">
-          <button type="button" id="plan-bar-prev">&#8249; Prev</button>
-          <button type="button" id="plan-bar-done" class="plan-bar-done">Mark as read</button>
-          <button type="button" id="plan-bar-next">Next &#8250;</button>
+          <button type="button" id="plan-bar-prev" title="Previous (←)">&#8249; Prev</button>
+          <button type="button" id="plan-bar-done" class="plan-bar-done" title="Mark as read (M)">Mark as read</button>
+          <button type="button" id="plan-bar-next" title="Next (→)">Next &#8250;</button>
         </div>
       </div>
       <a id="passage-gateway-link" class="passage-gw-link" target="_blank" rel="noopener noreferrer">View on BibleGateway (NIV) &#8599;</a>

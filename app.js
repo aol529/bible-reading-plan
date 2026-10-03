@@ -740,11 +740,19 @@
 
   function isDone(key){ return !!progress[key]; }
 
+  function saveProgress(){
+    try { localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress)); } catch (e) {}
+    refreshProgressUI();
+  }
+
   function setDone(key, done){
     if (done) progress[key] = 1;
     else delete progress[key];
-    try { localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress)); } catch (e) {}
-    refreshProgressUI();
+    saveProgress();
+  }
+
+  function isPlanComplete(plan){
+    return doneCount(plan) === getUnits(plan).length;
   }
 
   function doneCount(plan){
@@ -844,7 +852,9 @@
   function updateProgressSummary(){
     const total = getUnits(activePlan).length;
     const done = doneCount(activePlan);
-    document.getElementById('plan-progress-text').textContent = done + ' of ' + total + ' read';
+    document.getElementById('plan-progress-text').textContent = done === total
+      ? '\uD83C\uDF89 All ' + total + ' read'
+      : done + ' of ' + total + ' read';
     document.getElementById('plan-progress-fill').style.width = (total ? done / total * 100 : 0) + '%';
   }
 
@@ -1027,7 +1037,97 @@
     minutesEl.textContent = details.join(' · ');
     minutesEl.hidden = !details.length;
     document.getElementById('today-progress').textContent = doneCount(activePlan) + ' of ' + units.length + ' read';
+
+    // Every reading ticked off: the card celebrates instead of showing a
+    // reading (it still opens the reading view when tapped).
+    const complete = isPlanComplete(activePlan);
+    card.classList.toggle('complete', complete);
+    if (complete){
+      card.dataset.badge = 'Complete';
+      dateEl.textContent = 'You finished ' + PLAN_NAMES[activePlan] + '!';
+      document.getElementById('today-reading').textContent = '\uD83C\uDF89 Well done';
+      minutesEl.hidden = true;
+    }
+    const resetBtnEl = document.getElementById('progress-reset');
+    if (!resetBtnEl.classList.contains('confirm')) resetBtnEl.textContent = 'Reset ' + PLAN_NAMES[activePlan];
   }
+
+  // ---------------- Progress export / import / reset ----------------
+  // Export/import is how progress moves between devices (it's otherwise
+  // stored per browser). Import merges into what's already here and only
+  // keeps keys that match a real reading in one of the plans.
+  const progressStatus = document.getElementById('progress-status');
+  let progressStatusTimer = null;
+  function showProgressStatus(text){
+    progressStatus.textContent = text;
+    progressStatus.hidden = false;
+    clearTimeout(progressStatusTimer);
+    progressStatusTimer = setTimeout(() => { progressStatus.hidden = true; }, 6000);
+  }
+
+  const ALL_PLANS = Object.keys(PLAN_NAMES);
+
+  document.getElementById('progress-export').onclick = () => {
+    const data = { app: 'bible-reading-plan', version: 1, exported: new Date().toISOString(), progress };
+    const stamp = new Date().toISOString().slice(0, 10);
+    triggerDownload('bible-reading-progress-' + stamp + '.json', JSON.stringify(data, null, 2), 'application/json');
+    showProgressStatus('Exported ' + Object.keys(progress).length + ' ticked readings.');
+  };
+
+  const importFileInput = document.getElementById('progress-import-file');
+  document.getElementById('progress-import').onclick = () => importFileInput.click();
+  importFileInput.onchange = async () => {
+    const file = importFileInput.files[0];
+    importFileInput.value = '';
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const incoming = (data && typeof data.progress === 'object') ? data.progress : data;
+      const valid = Object.keys(incoming || {}).filter(key =>
+        incoming[key] && ALL_PLANS.some(plan => getUnits(plan).byKey[key] !== undefined));
+      if (!valid.length){ showProgressStatus('No readings found in that file.'); return; }
+      const added = valid.filter(key => !isDone(key)).length;
+      valid.forEach(key => { progress[key] = 1; });
+      saveProgress();
+      showProgressStatus('Imported ' + valid.length + ' ticked readings (' + added + ' new).');
+    } catch (e){
+      showProgressStatus('That file isn\'t a progress export.');
+    }
+  };
+
+  // Two taps to reset, so one stray tap can't wipe a plan's progress.
+  const resetBtn = document.getElementById('progress-reset');
+  let resetArmedTimer = null;
+  resetBtn.onclick = () => {
+    if (!resetBtn.classList.contains('confirm')){
+      resetBtn.classList.add('confirm');
+      resetBtn.textContent = 'Tap again to reset';
+      resetArmedTimer = setTimeout(() => { resetBtn.classList.remove('confirm'); updateTodayCard(); }, 4000);
+      return;
+    }
+    clearTimeout(resetArmedTimer);
+    resetBtn.classList.remove('confirm');
+    const cleared = getUnits(activePlan).filter(u => isDone(u.key));
+    cleared.forEach(u => { delete progress[u.key]; });
+    saveProgress();
+    showProgressStatus('Cleared ' + cleared.length + ' ticked readings from ' + PLAN_NAMES[activePlan] + '.');
+  };
+
+  // ---------------- Keyboard shortcuts ----------------
+  // Reading view only: \u2190/\u2192 step through the plan, M marks the
+  // current reading, Esc goes back home. Ignored while typing in a field
+  // or when a modifier key is held (so browser shortcuts still work).
+  document.addEventListener('keydown', e => {
+    if (readingView.hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
+    const ref = currentPassage && currentPassage.ref;
+    if (e.key === 'ArrowLeft' && ref) stepUnit(-1);
+    else if (e.key === 'ArrowRight' && ref) stepUnit(1);
+    else if ((e.key === 'm' || e.key === 'M') && ref) planBarDone.click();
+    else if (e.key === 'Escape') history.back();
+    else return;
+    e.preventDefault();
+  });
 
   // ---------------- Theme ----------------
   // Auto follows the device's light/dark setting; Light and Dark override

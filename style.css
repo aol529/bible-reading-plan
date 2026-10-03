@@ -175,6 +175,7 @@ header p{ margin:14px 0 0; color:var(--muted); font-size:14.5px; font-style:ital
 .today-card .open-hint{ margin-top:14px; font-size:12.5px; color:var(--gold-deep); font-weight:600; letter-spacing:.04em; }
 .today-card .date{ font-size:13.5px; color:var(--muted); margin:10px 0 10px; letter-spacing:.02em; }
 .today-card .reading{ font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--ink); }
+.today-card.complete{ border-color:var(--gold-light); box-shadow:var(--shadow-lg), 0 0 0 3px rgba(var(--gold-rgb),.18); }
 .today-card .progress-line{ margin-top:6px; font-size:12px; color:var(--muted); }
 .today-card .minutes{ margin-top:8px; font-size:12px; color:var(--gold-deep); font-weight:600; letter-spacing:.02em; }
 
@@ -204,6 +205,11 @@ header p{ margin:14px 0 0; color:var(--muted); font-size:14.5px; font-style:ital
   font-family:'Lora',serif; font-size:12px; font-weight:600; padding:5px 12px;
   border-radius:7px; border:1px solid var(--line); background:var(--surface);
   color:var(--gold-deep); cursor:pointer; transition:background .15s ease, border-color .15s ease;
+}
+.download-btn.confirm{ background:var(--error); border-color:var(--error); color:#fff; }
+.progress-status{
+  max-width:460px; margin:10px auto 0; padding:0 20px; text-align:center;
+  font-size:12.5px; color:var(--muted); font-style:italic;
 }
 .download-btn:hover{ background:var(--surface-2); border-color:var(--gold-light); }
 
