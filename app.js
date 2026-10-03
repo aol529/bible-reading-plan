@@ -27,15 +27,6 @@
   ];
   let currentTranslation = TRANSLATIONS[0];
 
-  function getTodayEntry(){
-    let book = '', chapters = null;
-    for (const entry of READING_PLAN[todayMonth]){
-      if (entry.b) book = entry.b;
-      if (entry.d === todayDate){ chapters = entry.c || null; break; }
-    }
-    return { book, chapters };
-  }
-
   // 52-Week plan: which week number and category (Sun=Epistles..Sat=Gospels)
   // today falls on. Week = ceil(day-of-year / 7), capped at 52 so the last
   // few days of the year land in week 52 rather than overflowing.
@@ -43,12 +34,6 @@
   const currentWeekNum = Math.min(52, Math.floor((dayOfYear - 1) / 7) + 1);
   const currentCategory = PLAN_52WEEK_DAY_TO_CATEGORY[now.getDay()];
   let selectedWeek = currentWeekNum;
-
-  function getTodayWeekEntry(){
-    const w = PLAN_52WEEK[currentWeekNum - 1];
-    const e = w[currentCategory];
-    return { book: e.b, chapters: e.c || null, category: currentCategory };
-  }
 
   // Combined-book days (e.g. "Obadiah & Jonah") aren't a single valid
   // BibleGateway reference, so those stay plain text rather than link out
@@ -666,20 +651,15 @@
     dayNavEl.hidden = !isDayPlan;
     daysCol.hidden = !isDayPlan;
 
+    if (isDayPlan) activeDayPlanKey = plan;
+
+    // Open whatever the home card points at (today, or the first unread
+    // day), so the card and the reading view always agree. The card is
+    // only empty if today has no entry in the plan (e.g. Feb 29, which the
+    // daily plan skips) — then show the plan's first reading instead.
     updateTodayCard();
-    if (isWeek){
-      renderWeek(currentWeekNum);
-      const { book, chapters } = getTodayWeekEntry();
-      const todayLink = weekBody.querySelector('tr.today td.reading a');
-      loadPassage(book, chapters, todayLink, null, refFor(plan, todayKey(plan), 0));
-    } else if (isDayPlan){
-      activeDayPlanKey = plan;
-      openUnit(plan, firstUnreadIndex(plan), 0);
-    } else {
-      const { book, chapters } = getTodayEntry();
-      const todayLink = body.querySelector('tr.today td.reading a');
-      loadPassage(book, chapters, todayLink, null, refFor(plan, todayKey(plan), 0));
-    }
+    const start = cardRef || { plan, index: 0, seg: 0 };
+    openUnit(start.plan, start.index, start.seg);
     updateProgressSummary();
   }
 
@@ -992,10 +972,8 @@
       versionList.querySelectorAll('.version-btn').forEach(b => b.classList.toggle('active', b.dataset.code === t.code));
       if (currentPassage){
         loadPassage(currentPassage.book, currentPassage.chapters, currentPassage.linkEl, currentPassage.highlight, currentPassage.ref);
-      } else {
-        const { book, chapters } = getTodayEntry();
-        const todayLink = body.querySelector('tr.today td.reading a');
-        loadPassage(book, chapters, todayLink);
+      } else if (cardRef){
+        openUnit(cardRef.plan, cardRef.index, cardRef.seg);
       }
     };
     versionList.appendChild(btn);
@@ -1314,8 +1292,6 @@
       browseGrid.innerHTML = '<div class="browse-loading">Couldn\'t load that chapter.</div>';
     }
   }
-
-  renderMonth(todayMonth);
 
   // Show today's reading by default, filling the passage panel before the
   // member has clicked anything.
