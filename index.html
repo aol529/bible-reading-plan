@@ -8,12 +8,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
+<script>
+  // Apply a saved Light/Dark choice before first paint, so the page
+  // doesn't flash the wrong theme while app.js loads.
+  try { var t = localStorage.getItem('brp-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 </head>
 <body>
 
 <div class="topbar"></div>
 
 <div id="home-view">
+
+<button type="button" class="theme-toggle theme-toggle-home"></button>
 
 <header>
   <div class="eyebrow">Daily Reading Plan</div>
@@ -66,9 +73,12 @@
 
 <div class="back-bar">
   <button type="button" id="back-home-btn" class="back-home-btn">&#8592; Back</button>
-  <div class="plan-progress">
-    <span id="plan-progress-text"></span>
-    <div class="plan-progress-track"><div class="plan-progress-fill" id="plan-progress-fill"></div></div>
+  <div class="back-bar-right">
+    <div class="plan-progress">
+      <span id="plan-progress-text"></span>
+      <div class="plan-progress-track"><div class="plan-progress-fill" id="plan-progress-fill"></div></div>
+    </div>
+    <button type="button" class="theme-toggle"></button>
   </div>
 </div>
 

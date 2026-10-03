@@ -1029,6 +1029,36 @@
     document.getElementById('today-progress').textContent = doneCount(activePlan) + ' of ' + units.length + ' read';
   }
 
+  // ---------------- Theme ----------------
+  // Auto follows the device's light/dark setting; Light and Dark override
+  // it. The choice is a per-browser convenience in localStorage (the
+  // inline script in index.html applies it before first paint).
+  const THEME_STORAGE_KEY = 'brp-theme';
+  const THEME_ORDER = ['auto', 'light', 'dark'];
+  const THEME_LABELS = { auto: 'Auto', light: '\u2600 Light', dark: '\u263E Dark' };
+  let theme = document.documentElement.dataset.theme || 'auto';
+
+  function applyTheme(){
+    if (theme === 'auto') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+    document.querySelectorAll('.theme-toggle').forEach(btn => {
+      btn.textContent = THEME_LABELS[theme];
+      btn.title = 'Theme: ' + theme + (theme === 'auto' ? ' (follows your device)' : '') + ' — click to change';
+    });
+  }
+
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.onclick = () => {
+      theme = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
+      try {
+        if (theme === 'auto') localStorage.removeItem(THEME_STORAGE_KEY);
+        else localStorage.setItem(THEME_STORAGE_KEY, theme);
+      } catch (e) {}
+      applyTheme();
+    };
+  });
+  applyTheme();
+
   // ---------------- Home / reading view ----------------
   // The home screen ends at the download row; everything below it (tables,
   // passage, translations, credit) lives in a separate reading view that
