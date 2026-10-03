@@ -424,7 +424,7 @@ td.reading a.active{ background:var(--accent-solid); color:#fff; }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 
 @media (max-width:760px){
-  .passage-panel{ position:static; max-height:none; max-width:none; }
+  .passage-panel{ position:static; max-height:none; max-width:none; height:80vh; height:80dvh; }
   .table-col{ padding:18px 16px 6px; width:100%; }
   table{ width:100%; }
   main{ gap:20px; }

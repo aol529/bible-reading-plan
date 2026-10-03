@@ -294,13 +294,21 @@
   // at the same level as the bottom of the reading panel next to it —
   // a fixed height (not just a cap), so a short passage doesn't leave the
   // panel shorter than the table, and a long one scrolls inside it instead
-  // of pushing it taller.
+  // of pushing it taller. Never shorter than MIN_PANEL_HEIGHT, since the
+  // day-sequence plans' one-row table would otherwise leave a sliver.
+  // On narrow screens the panel stacks below the table, so the CSS sizes
+  // it to the viewport instead and this leaves it alone. Measuring only
+  // works while the reading view is showing (hidden tables measure 0), so
+  // showReadingView() calls this again.
+  const MIN_PANEL_HEIGHT = 480;
+  const narrowScreen = window.matchMedia('(max-width:760px)');
   function syncPassageHeight(){
+    if (narrowScreen.matches){ passagePanel.style.height = ''; return; }
     const ref = activePlan === '52week' ? weekCol
       : (activePlan in DAY_PLANS ? daysCol : dailyCol);
-    if (!ref || ref.hidden){ passagePanel.style.height = ''; return; }
+    if (!ref || ref.hidden) return;
     const h = ref.getBoundingClientRect().height;
-    passagePanel.style.height = h > 0 ? h + 'px' : '';
+    if (h > 0) passagePanel.style.height = Math.max(h, MIN_PANEL_HEIGHT) + 'px';
   }
   window.addEventListener('resize', () => syncPassageHeight());
   // Google Fonts load asynchronously — the table's row height (and so its
@@ -1149,6 +1157,7 @@
     if (!readingView.hidden) return;
     homeView.hidden = true;
     readingView.hidden = false;
+    syncPassageHeight();
     history.pushState({ view: 'reading' }, '');
     window.scrollTo(0, 0);
   }
