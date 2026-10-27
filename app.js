@@ -1,4 +1,28 @@
 (function(){
+  // Small helpers (in WKAB these come from its own core).
+  // Local date as YYYY-MM-DD (not UTC, so late evenings stay "today").
+  const isoDate = d => { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const parseDate = iso => new Date(iso + 'T00:00:00');
+  // A short message at the bottom of the screen.
+  let toastTimer = null;
+  function toast(text){
+    let t = document.getElementById('brp-toast');
+    if (!t){ t = document.createElement('div'); t.id = 'brp-toast'; t.className = 'brp-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = text; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+  // A script from a CDN, fetched the first time it's needed (the PDF library).
+  const scripts = {};
+  function loadScript(src){
+    if (!scripts[src]) scripts[src] = new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = src; el.onload = resolve;
+      el.onerror = () => { delete scripts[src]; reject(new Error('Could not load the PDF maker. Check the connection and try again.')); };
+      document.head.appendChild(el);
+    });
+    return scripts[src];
+  }
+
   const MONTHS = Object.keys(READING_PLAN);
   const nav = document.getElementById('month-nav');
   const caption = document.getElementById('table-caption');
@@ -247,15 +271,54 @@
   const passageListenBtn = document.getElementById('passage-listen-btn');
   let activeLink = null;
 
-  // Read-aloud — the browser's own built-in speech synthesis (Web Speech
-  // API), supported natively in every modern browser with no extra
-  // software or screen reader needed on the visitor's end. speechText is
-  // rebuilt for whichever passage is currently loaded (verse text only,
-  // no verse-number digits, so it reads naturally instead of "1 In the
-  // beginning 2 the earth was...").
+  // Read-aloud: the browser's own speech (Web Speech API). It needs a voice
+  // installed on the device: phones and Windows/Mac have them, but Chrome on
+  // Linux often has none, and then speaking silently does nothing. So the
+  // button only shows once the browser reports at least one voice (they
+  // can arrive late, hence voiceschanged). speechText is rebuilt for each
+  // passage (verse text only, no verse numbers, so it reads naturally). It
+  // is spoken a few sentences at a time: Chrome can cut a long utterance
+  // off after about 15 seconds.
   const speechSupported = 'speechSynthesis' in window;
   let speechText = '';
   let speechState = 'idle'; // idle | playing | paused
+  let voices = [];
+  let chunks = [], chunkAt = 0;
+  const canSpeak = () => speechSupported && voices.length > 0;
+  function showListen(){ passageListenBtn.hidden = !canSpeak() || !speechText; }
+  if (speechSupported){
+    const loadVoices = () => { voices = window.speechSynthesis.getVoices(); showListen(); };
+    loadVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+  }
+  // An English voice if there is one, preferring the device's own.
+  function pickVoice(){
+    const en = voices.filter(v => /^en(-|_|$)/i.test(v.lang));
+    return en.find(v => v.default) || en.find(v => v.localService) || en[0] || null;
+  }
+  function chunked(text){
+    const out = [];
+    (text.match(/[^.!?;:]+[.!?;:]+["'’”)]*\s*|[^.!?;:]+$/g) || [text]).forEach(sentence => {
+      const last = out[out.length - 1];
+      if (last && last.length + sentence.length < 220) out[out.length - 1] = last + sentence;
+      else out.push(sentence);
+    });
+    return out.map(c => c.trim()).filter(Boolean);
+  }
+  function speakNext(){
+    if (speechState !== 'playing') return;
+    if (chunkAt >= chunks.length){ speechState = 'idle'; updateListenBtn(); return; }
+    const utter = new SpeechSynthesisUtterance(chunks[chunkAt++]);
+    const v = pickVoice();
+    if (v){ utter.voice = v; utter.lang = v.lang; }
+    utter.onend = speakNext;
+    utter.onerror = e => {
+      if (e.error === 'interrupted' || e.error === 'canceled') return;
+      speechState = 'idle'; updateListenBtn();
+      toast('Read-aloud stopped: this device couldn’t speak the passage.');
+    };
+    window.speechSynthesis.speak(utter);
+  }
 
   function updateListenBtn(){
     if (!speechSupported) return;
@@ -265,19 +328,19 @@
       : '&#9654; Resume';
   }
   function stopSpeech(){
-    if (speechSupported) window.speechSynthesis.cancel();
     speechState = 'idle';
+    chunks = []; chunkAt = 0;
+    if (speechSupported) window.speechSynthesis.cancel();
     updateListenBtn();
   }
   if (speechSupported){
     passageListenBtn.addEventListener('click', () => {
       if (speechState === 'idle'){
-        if (!speechText) return;
-        const utter = new SpeechSynthesisUtterance(speechText);
-        utter.onend = () => { speechState = 'idle'; updateListenBtn(); };
-        utter.onerror = () => { speechState = 'idle'; updateListenBtn(); };
-        window.speechSynthesis.speak(utter);
+        if (!speechText || !canSpeak()) return;
+        window.speechSynthesis.cancel();
+        chunks = chunked(speechText); chunkAt = 0;
         speechState = 'playing';
+        speakNext();
       } else if (speechState === 'playing'){
         window.speechSynthesis.pause();
         speechState = 'paused';
@@ -414,7 +477,7 @@
       }
 
       speechText = speechParts.join(' ');
-      passageListenBtn.hidden = !speechSupported || !speechText;
+      showListen();
 
       passageTitle.textContent = title;
       const liveMinutes = liveWordCount ? Math.max(1, Math.round(liveWordCount / READING_WPM)) : null;
@@ -760,14 +823,148 @@
 
   function saveProgress(){
     try { localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress)); } catch (e) {}
+    forgetUnread();
     refreshProgressUI();
   }
 
   function setDone(key, done){
     if (done) progress[key] = 1;
     else delete progress[key];
+    // The first tick starts the plan's count of unread days.
+    const plan = planOf(key);
+    if (done && !starts[plan]){ starts[plan] = isoDate(); saveStarts(); }
     saveProgress();
   }
+
+  // ---------------- Unread days ----------------
+  // When each plan was started, as { plan: 'YYYY-MM-DD' }, kept in this
+  // browser beside the ticks. Unread days are only counted from then. Set
+  // by the first tick, or by hand under the Today card.
+  const START_STORAGE_KEY = 'brp-start-v1';
+  let starts = {};
+  try { starts = JSON.parse(localStorage.getItem(START_STORAGE_KEY)) || {}; } catch (e) {}
+  function saveStarts(){ try { localStorage.setItem(START_STORAGE_KEY, JSON.stringify(starts)); } catch (e) {} }
+
+  const planOf = key => key.split(':')[0];
+  const midnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const DAY_MS = 86400000;
+
+  // The calendar plans' reading for a date (as setToday works out today's).
+  function keyForDate(plan, d){
+    if (plan === 'daily') return 'daily:' + MONTHS[d.getMonth()] + ':' + d.getDate();
+    const doy = Math.round((d - new Date(d.getFullYear(), 0, 0)) / DAY_MS);
+    return '52week:' + Math.min(52, Math.floor((doy - 1) / 7) + 1) + ':' + PLAN_52WEEK_DAY_TO_CATEGORY[d.getDay()];
+  }
+
+  // A plan ticked before start dates were kept gets one guessed from its
+  // ticks: the earliest ticked day for the calendar plans, and for the day
+  // plans a start that puts the first unread day on today.
+  function guessStart(plan){
+    const units = getUnits(plan), today = midnight(now);
+    if (plan in DAY_PLANS){
+      if (!units.some(u => isDone(u.key)) || isPlanComplete(plan)) return null;
+      return isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - (units[firstUnreadIndex(plan)].day - 1)));
+    }
+    const first = units.find(u => isDone(u.key));
+    if (!first) return null;
+    const p = first.key.split(':');
+    let d = plan === 'daily' ? new Date(today.getFullYear(), MONTHS.indexOf(p[1]), Number(p[2]))
+      : new Date(today.getFullYear(), 0, 1 + (Number(p[1]) - 1) * 7);
+    if (d > today) d.setFullYear(d.getFullYear() - 1);
+    return isoDate(d);
+  }
+  Object.keys(PLAN_NAMES).forEach(plan => {
+    if (starts[plan]) return;
+    const guess = guessStart(plan);
+    if (guess){ starts[plan] = guess; saveStarts(); }
+  });
+
+  // The readings whose day has passed since the plan was started but which
+  // aren't ticked, oldest first. Calendar plans go by the date, at most a
+  // year back (the plan comes round each year and ticks don't keep the
+  // year); day plans by how many days it has been since the start. Grace
+  // days have no reading, so nothing is owed for them.
+  let unreadCache = {};
+  function forgetUnread(){ unreadCache = {}; }
+  function unreadUnits(plan){
+    if (unreadCache[plan]) return unreadCache[plan];
+    const units = getUnits(plan), start = starts[plan];
+    const due = [];
+    if (start){
+      const from = parseDate(start), today = midnight(now);
+      if (plan in DAY_PLANS){
+        const dayNum = Math.round((today - from) / DAY_MS) + 1;
+        units.forEach(u => { if (u.day < dayNum) due.push(u); });
+      } else {
+        const yearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate() + 1);
+        const seen = new Set([units.byKey[todayKey(plan)]]);
+        for (const d = from > yearAgo ? from : yearAgo; d < today; d.setDate(d.getDate() + 1)){
+          const i = units.byKey[keyForDate(plan, d)];
+          if (i !== undefined && !seen.has(i)){ seen.add(i); due.push(units[i]); }
+        }
+      }
+    }
+    const list = due.filter(u => !isDone(u.key));
+    list.keys = new Set(list.map(u => u.key));
+    return unreadCache[plan] = list;
+  }
+  const isMissed = key => unreadUnits(planOf(key)).keys.has(key);
+
+  // Under the Today card: how many readings are unread, a way to catch
+  // up (the oldest first), and the date they're counted from.
+  const unreadEl = document.getElementById('brp-unread');
+  const unreadText = document.getElementById('brp-unread-text');
+  const unreadList = document.getElementById('brp-unread-list');
+  const unreadToggle = document.getElementById('brp-unread-toggle');
+  const catchUpBtn = document.getElementById('brp-catchup');
+  const startInput = document.getElementById('brp-start');
+  let unreadOpen = false;
+
+  function openFromHome(plan, unit){
+    showReadingView();
+    openUnit(plan, getUnits(plan).byKey[unit.key], 0);
+  }
+
+  function updateUnread(){
+    const plan = activePlan, list = unreadUnits(plan), n = list.length, s = n === 1 ? '' : 's';
+    unreadEl.hidden = false;
+    startInput.value = starts[plan] || '';
+    startInput.max = isoDate();
+    unreadText.className = n ? 'behind' : '';
+    unreadText.textContent = !starts[plan] ? 'Tick a reading, or pick the day you started, to count unread days.'
+      : !n ? '\u2713 All caught up'
+      : plan in DAY_PLANS ? n + ' day' + s + ' behind'
+      : n + ' unread ' + (plan === '52week' ? 'reading' : 'day') + s;
+    catchUpBtn.hidden = unreadToggle.hidden = !n;
+    unreadList.hidden = !(n && unreadOpen);
+    unreadToggle.textContent = unreadOpen ? 'Hide' : 'Show';
+    unreadToggle.setAttribute('aria-expanded', String(unreadOpen));
+    unreadList.innerHTML = '';
+    if (!n || !unreadOpen) return;
+    list.forEach(u => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      const when = document.createElement('span');
+      when.className = 'when';
+      when.textContent = u.label;
+      b.append(when, u.segs.map(seg => formatReading(seg.b, seg.c)).join(', '));
+      b.onclick = () => openFromHome(plan, u);
+      li.appendChild(b);
+      unreadList.appendChild(li);
+    });
+  }
+
+  catchUpBtn.onclick = () => { const list = unreadUnits(activePlan); if (list.length) openFromHome(activePlan, list[0]); };
+  unreadToggle.onclick = () => { unreadOpen = !unreadOpen; updateUnread(); };
+  startInput.onchange = () => {
+    if (startInput.value && startInput.value <= isoDate()) starts[activePlan] = startInput.value;
+    else delete starts[activePlan];
+    saveStarts();
+    forgetUnread();
+    refreshProgressUI();
+  };
+
 
   function isPlanComplete(plan){
     return doneCount(plan) === getUnits(plan).length;
@@ -788,6 +985,7 @@
   function markRow(tr, key){
     tr.dataset.key = key;
     tr.classList.toggle('done', isDone(key));
+    tr.classList.toggle('missed', isMissed(key));
   }
 
   function makeCheckCell(key){
@@ -880,6 +1078,7 @@
     document.querySelectorAll('tr[data-key]').forEach(tr => {
       const done = isDone(tr.dataset.key);
       tr.classList.toggle('done', done);
+      tr.classList.toggle('missed', isMissed(tr.dataset.key));
       const box = tr.querySelector('td.check input');
       if (box) box.checked = done;
     });
@@ -959,9 +1158,12 @@
     triggerDownload(planFilename('csv'), lines.join('\n'), 'text/csv');
   };
 
-  document.getElementById('download-pdf').onclick = () => {
+  document.getElementById('download-pdf').onclick = async () => {
     const rows = getExportRows(activePlan);
     const title = PLAN_NAMES[activePlan];
+    // The PDF library loads the first time it's needed.
+    try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'); }
+    catch (e){ toast(e.message); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -1022,6 +1224,7 @@
   // the card opens exactly that reading.
   let cardRef = null;
   function updateTodayCard(){
+    updateUnread();
     const card = document.getElementById('today-card');
     const dateEl = document.getElementById('today-date');
     const units = getUnits(activePlan);
@@ -1084,7 +1287,7 @@
   const ALL_PLANS = Object.keys(PLAN_NAMES);
 
   document.getElementById('progress-export').onclick = () => {
-    const data = { app: 'bible-reading-plan', version: 1, exported: new Date().toISOString(), progress };
+    const data = { app: 'bible-reading-plan', version: 1, exported: new Date().toISOString(), progress, starts };
     const stamp = new Date().toISOString().slice(0, 10);
     triggerDownload('bible-reading-progress-' + stamp + '.json', JSON.stringify(data, null, 2), 'application/json');
     showProgressStatus('Exported ' + Object.keys(progress).length + ' ticked readings.');
@@ -1104,6 +1307,11 @@
       if (!valid.length){ showProgressStatus('No readings found in that file.'); return; }
       const added = valid.filter(key => !isDone(key)).length;
       valid.forEach(key => { progress[key] = 1; });
+      // Start dates come too; the earlier of the two wins.
+      Object.entries((data && data.starts) || {}).forEach(([plan, day]) => {
+        if (PLAN_NAMES[plan] && /^\d{4}-\d{2}-\d{2}$/.test(day) && (!starts[plan] || day < starts[plan])) starts[plan] = day;
+      });
+      saveStarts();
       saveProgress();
       showProgressStatus('Imported ' + valid.length + ' ticked readings (' + added + ' new).');
     } catch (e){
@@ -1125,6 +1333,8 @@
     resetBtn.classList.remove('confirm');
     const cleared = getUnits(activePlan).filter(u => isDone(u.key));
     cleared.forEach(u => { delete progress[u.key]; });
+    delete starts[activePlan];
+    saveStarts();
     saveProgress();
     showProgressStatus('Cleared ' + cleared.length + ' ticked readings from ' + PLAN_NAMES[activePlan] + '.');
   };

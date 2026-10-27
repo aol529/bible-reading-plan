@@ -464,3 +464,20 @@ td.reading a.active{ background:var(--accent-solid); color:#fff; }
 .theme-toggle:hover{ border-color:var(--gold-light); }
 .theme-toggle-home{ position:absolute; top:16px; right:16px; z-index:1; }
 .back-bar-right{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+
+/* Unread days: under the Today card (app.js "Unread days") */
+.brp-unread{ max-width:460px; margin:12px auto 0; text-align:center; font-size:13.5px; }
+.brp-unread-head{ display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; }
+#brp-unread-text.behind{ color:var(--error); font-weight:600; }
+.brp-unread-list{ list-style:none; margin:10px 0 0; padding:6px; max-height:260px; overflow-y:auto; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); text-align:left; }
+.brp-unread-list button{ display:flex; gap:10px; width:100%; font:inherit; font-size:13.5px; background:none; border:0; border-radius:8px; padding:6px 10px; color:var(--ink); cursor:pointer; text-align:left; }
+.brp-unread-list button:hover{ background:var(--surface-2); }
+.brp-unread-list .when{ flex:0 0 auto; min-width:96px; color:var(--muted); }
+.brp-start{ display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:12.5px; color:var(--muted); }
+.brp-start input{ font:inherit; padding:2px 6px; width:auto; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); }
+tr.missed td.day{ color:var(--error); font-weight:600; }
+tr.missed td.day::after{ content:'\2022'; margin-left:3px; }
+.brp-toast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(10px); max-width:calc(100% - 24px); padding:10px 16px; border-radius:999px;
+  background:var(--ink); color:var(--surface); font-size:13.5px; box-shadow:var(--shadow-md); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50; }
+.brp-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+.brp-unread .download-btn.primary{ background:var(--accent-fill); color:#fff; border-color:transparent; }
